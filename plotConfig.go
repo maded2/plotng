@@ -18,6 +18,7 @@ type Config struct {
 type PlotConfig struct {
 	configPath    string
 	currentConfig *Config
+	lastMod       time.Time
 	lock          sync.RWMutex
 }
 
@@ -32,18 +33,26 @@ func (pc *PlotConfig) Init() {
 }
 
 func (pc *PlotConfig) ProcessConfig() {
-	if f, err := os.Open(pc.configPath); err != nil {
+	if fs, err := os.Lstat(pc.configPath); err != nil {
 		log.Printf("Failed to open config file [%s]: %s\n", pc.configPath, err)
 	} else {
-		decoder := json.NewDecoder(f)
-		var newConfig Config
-		if err := decoder.Decode(&newConfig); err != nil {
-			log.Printf("Failed to process config file [%s]: %s\n", pc.configPath, err)
-		} else {
-			pc.lock.Lock()
-			pc.currentConfig = &newConfig
-			pc.lock.Unlock()
-			log.Printf("New configuration loaded")
+		if pc.lastMod != fs.ModTime() {
+			if f, err := os.Open(pc.configPath); err != nil {
+				log.Printf("Failed to open config file [%s]: %s\n", pc.configPath, err)
+			} else {
+				decoder := json.NewDecoder(f)
+				var newConfig Config
+				if err := decoder.Decode(&newConfig); err != nil {
+					log.Printf("Failed to process config file [%s]: %s\n", pc.configPath, err)
+				} else {
+					pc.lock.Lock()
+					pc.currentConfig = &newConfig
+					pc.lock.Unlock()
+					log.Printf("New configuration loaded")
+				}
+				f.Close()
+			}
+			pc.lastMod = fs.ModTime()
 		}
 	}
 }

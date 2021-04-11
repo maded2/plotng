@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/gdamore/tcell/v2"
 	"github.com/ricochet2200/go-disk-usage/du"
 	"github.com/rivo/tview"
+	"time"
 )
 
 const KB = uint64(1024)
@@ -26,31 +28,54 @@ func main() {
 		return
 	}
 
-	usage := du.NewDiskUsage("/")
-	fmt.Println("Free:", usage.Free()/(KB*KB))
-	fmt.Println("Available:", usage.Available()/(KB*KB))
-	fmt.Println("Size:", usage.Size()/(KB*KB))
-	fmt.Println("Used:", usage.Used()/(KB*KB))
-	fmt.Println("Usage:", usage.Usage()*100, "%")
-
 	config = &PlotConfig{
 		configPath: *configFile,
 	}
 	config.Init()
 
 	setupUI()
+
+	go displayDiskSpaces()
 	app.Run()
 }
 
+func displayDiskSpaces() {
+	time.Sleep(5 * time.Second)
+	drawTargetTable()
+	ticker := time.NewTicker(30 * time.Second)
+	for range ticker.C {
+		drawTargetTable()
+	}
+}
+
+func drawTargetTable() {
+	if config.currentConfig != nil {
+		targetTable.Clear()
+		targetTable.SetCell(0, 0, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+		targetTable.SetCell(0, 1, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+		config.lock.RLock()
+		for i, path := range config.currentConfig.TargetDirectory {
+			targetTable.SetCell(i+1, 0, tview.NewTableCell(path))
+			d := du.NewDiskUsage(path)
+			availableSpace := d.Available() / (KB * KB * KB)
+			targetTable.SetCell(i+1, 1, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
+		}
+		config.lock.RUnlock()
+		app.Draw()
+	}
+}
+
 func setupUI() {
+	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
 	plotTable = tview.NewTable()
-	plotTable.SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Active Plots")
+	plotTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Active Plots")
 
 	targetTable = tview.NewTable()
-	targetTable.SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Target Directories")
+	targetTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Target Directories")
+	targetTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
 
 	lastTable = tview.NewTable()
-	lastTable.SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Last Plots")
+	lastTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Last Plots")
 
 	logTextbox = tview.NewTextView()
 	logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)

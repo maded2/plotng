@@ -14,6 +14,7 @@ import (
 const (
 	PlotRunning = iota
 	PlotError
+	PlotFinished
 )
 
 type ActivePlot struct {
@@ -27,6 +28,7 @@ type ActivePlot struct {
 	tail  []string
 	state int
 	lock  sync.RWMutex
+	id    string
 }
 
 func (ap *ActivePlot) CheckSpace() bool {
@@ -85,6 +87,9 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 		} else {
 			if strings.HasPrefix(s, "Starting phase ") {
 				ap.phase = s[15:18]
+			}
+			if strings.HasPrefix(s, "ID: ") {
+				ap.id = s[4:]
 			}
 			ap.lock.Lock()
 			ap.tail = append(ap.tail, s)
