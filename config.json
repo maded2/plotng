@@ -1,0 +1,6 @@
+{
+  "Fingerprint": "636105213",
+  "NumberOfPlots": 2,
+  "PlotDirectory": ["/plot1", "/plot2"],
+  "TargetDirectory": ["/target1", "/target2"]
+}
