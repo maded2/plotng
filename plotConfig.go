@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	TargetDirectory []string
-	PlotDirectory   []string
+	TempDirectory   []string
 	NumberOfPlots   int
 	Fingerprint     string
 }

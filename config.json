@@ -1,6 +1,6 @@
 {
   "Fingerprint": "636105213",
   "NumberOfPlots": 2,
-  "PlotDirectory": ["/tmp"],
+  "TempDirectory": ["/media/eddie/Games"],
   "TargetDirectory": ["/home", "/media/eddie/06EE5FD4EE5FBB1F"]
 }

@@ -18,6 +18,7 @@ const (
 )
 
 type ActivePlot struct {
+	plotId      int64
 	startTime   time.Time
 	endTime     time.Time
 	targetDir   string
