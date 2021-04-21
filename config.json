@@ -2,5 +2,5 @@
   "Fingerprint": "636105213",
   "NumberOfPlots": 2,
   "TempDirectory": ["/media/eddie/plot1", "/media/eddie/plot2"],
-  "TargetDirectory": ["/media/eddie/plot1"]
+  "TargetDirectory": ["/media/eddie/plot1", "/media/eddie/plot2"]
 }

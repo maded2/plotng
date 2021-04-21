@@ -48,7 +48,7 @@ func (ap *ActivePlot) String() string {
 	}
 	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.Id, state, ap.Phase, ap.StartTime.Format("2006-01-02 15:04:05"), time.Now().Sub(ap.StartTime).String(), ap.PlotDir, ap.TargetDir)
 	for _, l := range ap.Tail {
-		s += fmt.Sprintf("\t%s\n", l)
+		s += fmt.Sprintf("\t%s", l)
 	}
 	ap.Lock.RUnlock()
 	return s
@@ -114,7 +114,7 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 				ap.Phase = s[15:18]
 			}
 			if strings.HasPrefix(s, "ID: ") {
-				ap.Id = s[4:]
+				ap.Id = strings.TrimSuffix(s[4:], "\n")
 			}
 			ap.Lock.Lock()
 			ap.Tail = append(ap.Tail, s)
