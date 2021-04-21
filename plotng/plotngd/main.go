@@ -72,6 +72,7 @@ func createNewPlot(config *plotng.Config) {
 	if currentTarget >= len(config.TargetDirectory) {
 		currentTarget = 0
 		targetDelayStartTime = time.Now().Add(time.Duration(config.StaggeringDelay) * time.Minute)
+		return
 	}
 	targetDir := config.TargetDirectory[currentTarget]
 	currentTarget++
