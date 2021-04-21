@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/ricochet2200/go-disk-usage/du"
 	"plotng/plotng"
 	"time"
@@ -10,6 +11,7 @@ import (
 var (
 	config        *plotng.PlotConfig
 	active        map[int64]*plotng.ActivePlot
+	archive       []*plotng.ActivePlot
 	currentTemp   int
 	currentTarget int
 )
@@ -33,7 +35,7 @@ func main() {
 
 func createPlot() {
 	ticker := time.NewTicker(time.Minute)
-	for range ticker.C {
+	for t := range ticker.C {
 		if config.CurrentConfig != nil {
 			config.Lock.RLock()
 			if len(active) < config.CurrentConfig.NumberOfPlots {
@@ -41,6 +43,15 @@ func createPlot() {
 			}
 			config.Lock.RUnlock()
 		}
+		fmt.Printf("%s\n", t.Format("2006-01-02 15:04:05"))
+		for _, plot := range active {
+			fmt.Print(plot.String())
+			if plot.State == plotng.PlotFinished || plot.State == plotng.PlotError {
+				archive = append(archive, plot)
+				delete(active, plot.PlotId)
+			}
+		}
+		fmt.Println(" ")
 	}
 }
 
@@ -62,15 +73,15 @@ func createNewPlot(config *plotng.Config) {
 	t := time.Now()
 	plot := &plotng.ActivePlot{
 		PlotId:      t.Unix(),
-		StartTime:   t,
 		TargetDir:   targetDir,
 		PlotDir:     plotDir,
 		Fingerprint: config.Fingerprint,
-		Phase:       "",
+		Phase:       "NA",
 		Tail:        nil,
 		State:       plotng.PlotRunning,
 	}
 	active[plot.PlotId] = plot
+	go plot.RunPlot()
 }
 
 func getDiskSpaceAvailable(path string) uint64 {

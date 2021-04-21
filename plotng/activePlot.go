@@ -100,6 +100,8 @@ func (ap *ActivePlot) RunPlot() {
 		log.Printf("Plotting Exit with Error: %s", err)
 		return
 	}
+	ap.State = PlotFinished
+	return
 }
 
 func (ap *ActivePlot) processLogs(in io.ReadCloser) {
