@@ -63,9 +63,6 @@ func createNewPlot(config *plotng.Config) {
 	if time.Now().Before(targetDelayStartTime) {
 		return
 	}
-	if currentTemp >= len(config.TempDirectory) {
-		currentTemp = 0
-	}
 
 	if currentTarget >= len(config.TargetDirectory) {
 		currentTarget = 0
@@ -74,6 +71,9 @@ func createNewPlot(config *plotng.Config) {
 	}
 	plotDir := config.TempDirectory[currentTemp]
 	currentTemp++
+	if currentTemp >= len(config.TempDirectory) {
+		currentTemp = 0
+	}
 	targetDir := config.TargetDirectory[currentTarget]
 	currentTarget++
 	t := time.Now()
