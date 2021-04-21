@@ -75,7 +75,7 @@ func (ap *ActivePlot) RunPlot() {
 	}()
 	args := []string{
 		"plots", "create", "-k32", "-n1", "-b6000", "-u128",
-		"-t" + ap.TargetDir,
+		"-t" + ap.PlotDir,
 		"-d" + ap.TargetDir,
 		"-a" + ap.Fingerprint,
 	}
