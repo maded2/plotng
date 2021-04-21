@@ -9,11 +9,12 @@ import (
 )
 
 var (
-	config        *plotng.PlotConfig
-	active        map[int64]*plotng.ActivePlot
-	archive       []*plotng.ActivePlot
-	currentTemp   int
-	currentTarget int
+	config               *plotng.PlotConfig
+	active               map[int64]*plotng.ActivePlot
+	archive              []*plotng.ActivePlot
+	currentTemp          int
+	currentTarget        int
+	targetDelayStartTime time.Time
 )
 
 func main() {
@@ -38,7 +39,7 @@ func createPlot() {
 	for t := range ticker.C {
 		if config.CurrentConfig != nil {
 			config.Lock.RLock()
-			if len(active) < config.CurrentConfig.NumberOfPlots {
+			if len(active) < config.CurrentConfig.NumberOfParallelPlots {
 				createNewPlot(config.CurrentConfig)
 			}
 			config.Lock.RUnlock()
@@ -59,6 +60,9 @@ func createNewPlot(config *plotng.Config) {
 	if len(config.TempDirectory) == 0 || len(config.TargetDirectory) == 0 {
 		return
 	}
+	if time.Now().Before(targetDelayStartTime) {
+		return
+	}
 	if currentTemp >= len(config.TempDirectory) {
 		currentTemp = 0
 	}
@@ -67,6 +71,7 @@ func createNewPlot(config *plotng.Config) {
 
 	if currentTarget >= len(config.TargetDirectory) {
 		currentTarget = 0
+		targetDelayStartTime = time.Now().Add(time.Duration(config.StaggeringDelay) * time.Minute)
 	}
 	targetDir := config.TargetDirectory[currentTarget]
 	currentTarget++

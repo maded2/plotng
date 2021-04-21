@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	TargetDirectory []string
-	TempDirectory   []string
-	NumberOfPlots   int
-	Fingerprint     string
+	TargetDirectory       []string
+	TempDirectory         []string
+	NumberOfParallelPlots int
+	Fingerprint           string
+	StaggeringDelay       int
 }
 
 type PlotConfig struct {

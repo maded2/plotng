@@ -54,7 +54,7 @@ func createPlot() {
 	for range ticker.C {
 		if config.CurrentConfig != nil {
 			config.Lock.RLock()
-			if len(active) < config.CurrentConfig.NumberOfPlots {
+			if len(active) < config.CurrentConfig.NumberOfParallelPlots {
 				createNewPlot(config.CurrentConfig)
 			}
 			config.Lock.RUnlock()
