@@ -35,7 +35,7 @@ type ActivePlot struct {
 	Id    string
 }
 
-func (ap *ActivePlot) String() string {
+func (ap *ActivePlot) String(showLog bool) string {
 	ap.Lock.RLock()
 	state := "Unknown"
 	switch ap.State {
@@ -47,8 +47,10 @@ func (ap *ActivePlot) String() string {
 		state = "Finished"
 	}
 	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.Id, state, ap.Phase, ap.StartTime.Format("2006-01-02 15:04:05"), time.Now().Sub(ap.StartTime).String(), ap.PlotDir, ap.TargetDir)
-	for _, l := range ap.Tail {
-		s += fmt.Sprintf("\t%s", l)
+	if showLog {
+		for _, l := range ap.Tail {
+			s += fmt.Sprintf("\t%s", l)
+		}
 	}
 	ap.Lock.RUnlock()
 	return s

@@ -1,8 +1,12 @@
 package internal
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"github.com/ricochet2200/go-disk-usage/du"
+	"net/http"
+	"sync"
 	"time"
 )
 
@@ -13,9 +17,13 @@ type Server struct {
 	currentTemp          int
 	currentTarget        int
 	targetDelayStartTime time.Time
+	lock                 sync.RWMutex
 }
 
-func (server *Server) ProcessLoop(configPath string) {
+func (server *Server) ProcessLoop(configPath string, port int) {
+	gob.Register(Msg{})
+	go http.ListenAndServe(fmt.Sprintf(":%d", port), server)
+
 	server.config = &PlotConfig{
 		ConfigPath: configPath,
 	}
@@ -38,7 +46,7 @@ func (server *Server) createPlot(t time.Time) {
 	}
 	fmt.Printf("%s, %d Active Plots\n", t.Format("2006-01-02 15:04:05"), len(server.active))
 	for _, plot := range server.active {
-		fmt.Print(plot.String())
+		fmt.Print(plot.String(server.config.CurrentConfig.ShowPlotLog))
 		if plot.State == PlotFinished || plot.State == PlotError {
 			server.archive = append(server.archive, plot)
 			delete(server.active, plot.PlotId)
@@ -48,6 +56,8 @@ func (server *Server) createPlot(t time.Time) {
 }
 
 func (server *Server) createNewPlot(config *Config) {
+	defer server.lock.Unlock()
+	server.lock.Lock()
 	if len(config.TempDirectory) == 0 || len(config.TargetDirectory) == 0 {
 		return
 	}
@@ -84,4 +94,40 @@ func (server *Server) createNewPlot(config *Config) {
 func (server *Server) getDiskSpaceAvailable(path string) uint64 {
 	d := du.NewDiskUsage(path)
 	return d.Available()
+}
+
+func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	defer server.lock.RUnlock()
+	server.lock.RLock()
+
+	var msg Msg
+	for _, v := range server.active {
+		msg.Actives = append(msg.Actives, v)
+	}
+	for _, v := range server.archive {
+		msg.Archived = append(msg.Archived, v)
+	}
+	if server.config.CurrentConfig != nil {
+		for _, dir := range server.config.CurrentConfig.TargetDirectory {
+			msg.TargetDirs[dir] = server.getDiskSpaceAvailable(dir)
+		}
+		for _, dir := range server.config.CurrentConfig.TempDirectory {
+			msg.TempDirs[dir] = server.getDiskSpaceAvailable(dir)
+		}
+	}
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(msg); err == nil {
+		resp.Write(buf.Bytes())
+		resp.WriteHeader(http.StatusOK)
+	} else {
+		resp.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+type Msg struct {
+	Actives    []*ActivePlot
+	Archived   []*ActivePlot
+	TempDirs   map[string]uint64
+	TargetDirs map[string]uint64
 }

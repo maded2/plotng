@@ -14,6 +14,7 @@ type Config struct {
 	NumberOfParallelPlots int
 	Fingerprint           string
 	StaggeringDelay       int
+	ShowPlotLog           bool
 }
 
 type PlotConfig struct {

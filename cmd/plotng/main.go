@@ -8,6 +8,9 @@ import (
 func main() {
 	configFile := flag.String("config", "", "configuration file")
 	ui := flag.Bool("ui", false, "launch UI client only, it will attempt to connect to server")
+	host := flag.String("host", "localhost", "host server name, default: localhost")
+	port := flag.Int("port", 8484, "host server port number, default: 8484")
+
 	flag.Parse()
 	if flag.Parsed() == false || len(*configFile) == 0 {
 		flag.Usage()
@@ -15,9 +18,9 @@ func main() {
 	}
 	if *ui {
 		client := &internal.Client{}
-		client.ProcessLoop()
+		client.ProcessLoop(*host, *port)
 	} else {
 		server := &internal.Server{}
-		server.ProcessLoop(*configFile)
+		server.ProcessLoop(*configFile, *port)
 	}
 }

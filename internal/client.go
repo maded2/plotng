@@ -23,7 +23,7 @@ type Client struct {
 	TempDirectory   []string
 }
 
-func (client *Client) ProcessLoop() {
+func (client *Client) ProcessLoop(host string, port int) {
 	client.setupUI()
 
 	go client.displayDiskSpaces()
