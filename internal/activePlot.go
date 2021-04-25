@@ -31,12 +31,12 @@ type ActivePlot struct {
 	Phase string
 	Tail  []string
 	State int
-	Lock  sync.RWMutex
+	lock  sync.RWMutex
 	Id    string
 }
 
 func (ap *ActivePlot) String(showLog bool) string {
-	ap.Lock.RLock()
+	ap.lock.RLock()
 	state := "Unknown"
 	switch ap.State {
 	case PlotRunning:
@@ -52,7 +52,7 @@ func (ap *ActivePlot) String(showLog bool) string {
 			s += fmt.Sprintf("\t%s", l)
 		}
 	}
-	ap.Lock.RUnlock()
+	ap.lock.RUnlock()
 	return s
 }
 
@@ -118,12 +118,12 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 			if strings.HasPrefix(s, "ID: ") {
 				ap.Id = strings.TrimSuffix(s[4:], "\n")
 			}
-			ap.Lock.Lock()
+			ap.lock.Lock()
 			ap.Tail = append(ap.Tail, s)
 			if len(ap.Tail) > 10 {
 				ap.Tail = ap.Tail[len(ap.Tail)-10:]
 			}
-			ap.Lock.Unlock()
+			ap.lock.Unlock()
 		}
 	}
 	return

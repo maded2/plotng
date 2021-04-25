@@ -12,7 +12,7 @@ func main() {
 	port := flag.Int("port", 8484, "host server port number, default: 8484")
 
 	flag.Parse()
-	if flag.Parsed() == false || len(*configFile) == 0 {
+	if flag.Parsed() == false || (len(*configFile) == 0 && *ui == false) {
 		flag.Usage()
 		return
 	}

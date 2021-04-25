@@ -1,8 +1,8 @@
 {
   "Fingerprint": "636105213",
-  "NumberOfParallelPlots": 2,
-  "TempDirectory": ["/media/eddie/plot1", "/media/eddie/plot2"],
-  "TargetDirectory": ["/media/eddie/plot1", "/media/eddie/plot2"],
+  "NumberOfParallelPlots": 0,
+  "TempDirectory": ["/media/eddie"],
+  "TargetDirectory": ["/media/eddie"],
   "StaggeringDelay": 5,
   "ShowPlotLog": false
 }

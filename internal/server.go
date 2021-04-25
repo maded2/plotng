@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/ricochet2200/go-disk-usage/du"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -22,7 +23,12 @@ type Server struct {
 
 func (server *Server) ProcessLoop(configPath string, port int) {
 	gob.Register(Msg{})
-	go http.ListenAndServe(fmt.Sprintf(":%d", port), server)
+	gob.Register(ActivePlot{})
+	go func() {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), server); err != nil {
+			log.Fatalf("Failed to start webserver: %s", err)
+		}
+	}()
 
 	server.config = &PlotConfig{
 		ConfigPath: configPath,
@@ -97,10 +103,13 @@ func (server *Server) getDiskSpaceAvailable(path string) uint64 {
 }
 
 func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	log.Printf("New query: %s", req.URL.String())
 	defer server.lock.RUnlock()
 	server.lock.RLock()
 
 	var msg Msg
+	msg.TargetDirs = map[string]uint64{}
+	msg.TempDirs = map[string]uint64{}
 	for _, v := range server.active {
 		msg.Actives = append(msg.Actives, v)
 	}
@@ -118,10 +127,11 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(msg); err == nil {
-		resp.Write(buf.Bytes())
 		resp.WriteHeader(http.StatusOK)
+		resp.Write(buf.Bytes())
 	} else {
 		resp.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Failed to encode message: %s", err)
 	}
 }
 
