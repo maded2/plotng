@@ -13,6 +13,8 @@ Once a valid configuration file has been loaded then it will start one new plot 
 
 Please note that I've not tested this on Windows / Mac.
 
+EDIT: Pre-built binaries for 64-bits Linux included om the release
+
 ##Running Server (runs on the plotter)
 
 `
