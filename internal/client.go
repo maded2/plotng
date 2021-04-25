@@ -167,9 +167,7 @@ func (client *Client) setupUI() {
 
 	client.app = tview.NewApplication()
 	client.app.SetRoot(mainPanel, true)
-	client.app.EnableMouse(true)
-	client.app.EnableMouse(true)
-
+	client.app.EnableMouse(false)
 }
 
 func (client *Client) drawActivePlots() {
@@ -241,7 +239,7 @@ func (client *Client) drawActivePlots() {
 
 func (client *Client) selectPlot(row int, column int) {
 	s := ""
-	if client.msg == nil || row == 0 || row > len(client.msg.Actives) {
+	if client.msg == nil || row <= 0 || row > len(client.msg.Actives) {
 		client.logTextbox.SetText(s)
 		return
 	}
