@@ -7,13 +7,13 @@ The server backend does a cycle every minute and check if the configuraion file 
 Once a valid configuration file has been loaded then it will start one new plot per cycle.
 
 
-###Installation
+##Installation
 
 `go install plotng/cmd/plotng`
 
 Please note that I've not tested this on Windows / Mac.
 
-###Running Server
+##Running Server (runs on the plotter)
 
 `
 plotng -config <json config file> -port <plotter port number, default: 8484>
@@ -21,7 +21,9 @@ plotng -config <json config file> -port <plotter port number, default: 8484>
 
 **Please note**: chia enviornment should be activated before starting plotng
 
-###Running UI
+##Running UI (run anyway)
+
+![PlotNG UI](plotng.png)
 
 The UI can run on any host and point back to the server using the host and port parameter
 
@@ -30,7 +32,7 @@ The UI can run on any host and point back to the server using the host and port 
 plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 8484>
 `
 
-###Configuration File (JSON format)
+##Configuration File (JSON format)
 
 
     {
