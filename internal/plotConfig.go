@@ -13,6 +13,8 @@ type Config struct {
 	TempDirectory         []string
 	NumberOfParallelPlots int
 	Fingerprint           string
+	FarmerPublicKey       string
+	PoolPublicKey         string
 	StaggeringDelay       int
 	ShowPlotLog           bool
 }

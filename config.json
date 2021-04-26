@@ -1,5 +1,7 @@
 {
-  "Fingerprint": "636105213",
+  "Fingerprint": "",
+  "FarmerPublicKey": "",
+  "PoolPublicKey": "",
   "NumberOfParallelPlots": 0,
   "TempDirectory": ["/media/eddie"],
   "TargetDirectory": ["/media/eddie"],

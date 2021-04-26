@@ -21,12 +21,14 @@ const (
 )
 
 type ActivePlot struct {
-	PlotId      int64
-	StartTime   time.Time
-	EndTime     time.Time
-	TargetDir   string
-	PlotDir     string
-	Fingerprint string
+	PlotId          int64
+	StartTime       time.Time
+	EndTime         time.Time
+	TargetDir       string
+	PlotDir         string
+	Fingerprint     string
+	FarmerPublicKey string
+	PoolPublicKey   string
 
 	Phase string
 	Tail  []string
@@ -79,7 +81,15 @@ func (ap *ActivePlot) RunPlot() {
 		"plots", "create", "-k32", "-n1", "-b6000", "-u128",
 		"-t" + ap.PlotDir,
 		"-d" + ap.TargetDir,
-		"-a" + ap.Fingerprint,
+	}
+	if len(ap.Fingerprint) > 0 {
+		args = append(args, "-a"+ap.Fingerprint)
+	}
+	if len(ap.FarmerPublicKey) > 0 {
+		args = append(args, "-f"+ap.FarmerPublicKey)
+	}
+	if len(ap.PoolPublicKey) > 0 {
+		args = append(args, "-p"+ap.PoolPublicKey)
 	}
 	cmd := exec.Command("chia", args...)
 	ap.State = PlotRunning

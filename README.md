@@ -38,7 +38,9 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 
 
     {
-        "Fingerprint": "636105213",
+        "Fingerprint": "",
+        "FarmerPublicKey": "",
+        "PoolPublicKey": "",
         "NumberOfParallelPlots": 3,
         "TempDirectory": ["/media/eddie/plot1", "/media/eddie/plot2", , "/media/eddie/plot3"],
         "TargetDirectory": ["/media/eddie/dst1", "/media/eddie/dst2"],
@@ -48,7 +50,9 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 
 ###Settings
 
-- Fingerprint : fingerprint passed to the chia command line tool
+- Fingerprint : fingerprint passed to the chia command line tool (you can either use the fingerprint if the private has been installed on the plotter or use the following farmer/pool public key instead)
+- FarmerPublicKey : Farmer Public Key passed to the chia command line tool
+- PoolPublicKey : Pool Public Key passed to the chia command line tool
 - NumberOfParallelPlots : number of parallel plots to create.  Set to zero for orderly shutdown
 - TempDirectory : list of plot directories / drives.  The server process will choose the next directory path on the list and wraps to the beginning when it reaches the end.
 - TargetDirectory : list destination directories / drives.  The server process will choose the next directory path on the list and wraps to the beginning when it reaches the end.

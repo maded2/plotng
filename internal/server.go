@@ -85,13 +85,15 @@ func (server *Server) createNewPlot(config *Config) {
 	server.currentTarget++
 	t := time.Now()
 	plot := &ActivePlot{
-		PlotId:      t.Unix(),
-		TargetDir:   targetDir,
-		PlotDir:     plotDir,
-		Fingerprint: config.Fingerprint,
-		Phase:       "NA",
-		Tail:        nil,
-		State:       PlotRunning,
+		PlotId:          t.Unix(),
+		TargetDir:       targetDir,
+		PlotDir:         plotDir,
+		Fingerprint:     config.Fingerprint,
+		FarmerPublicKey: config.FarmerPublicKey,
+		PoolPublicKey:   config.PoolPublicKey,
+		Phase:           "NA",
+		Tail:            nil,
+		State:           PlotRunning,
 	}
 	server.active[plot.PlotId] = plot
 	go plot.RunPlot()
