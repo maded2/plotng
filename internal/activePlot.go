@@ -29,6 +29,8 @@ type ActivePlot struct {
 	Fingerprint     string
 	FarmerPublicKey string
 	PoolPublicKey   string
+	Threads         int
+	Buffers         int
 
 	Phase string
 	Tail  []string
@@ -91,6 +93,13 @@ func (ap *ActivePlot) RunPlot() {
 	if len(ap.PoolPublicKey) > 0 {
 		args = append(args, "-p"+ap.PoolPublicKey)
 	}
+	if ap.Threads > 0 {
+		args = append(args, fmt.Sprintf("-r%d", ap.Threads))
+	}
+	if ap.Buffers > 0 {
+		args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
+	}
+
 	cmd := exec.Command("chia", args...)
 	ap.State = PlotRunning
 	if stderr, err := cmd.StderrPipe(); err != nil {

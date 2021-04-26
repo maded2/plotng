@@ -91,6 +91,8 @@ func (server *Server) createNewPlot(config *Config) {
 		Fingerprint:     config.Fingerprint,
 		FarmerPublicKey: config.FarmerPublicKey,
 		PoolPublicKey:   config.PoolPublicKey,
+		Threads:         config.Threads,
+		Buffers:         config.Buffers,
 		Phase:           "NA",
 		Tail:            nil,
 		State:           PlotRunning,

@@ -15,6 +15,8 @@ type Config struct {
 	Fingerprint           string
 	FarmerPublicKey       string
 	PoolPublicKey         string
+	Threads               int
+	Buffers               int
 	StaggeringDelay       int
 	ShowPlotLog           bool
 }

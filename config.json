@@ -2,6 +2,8 @@
   "Fingerprint": "",
   "FarmerPublicKey": "",
   "PoolPublicKey": "",
+  "Threads": 0,
+  "Buffers": 0,
   "NumberOfParallelPlots": 0,
   "TempDirectory": ["/media/eddie"],
   "TargetDirectory": ["/media/eddie"],
