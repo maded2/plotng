@@ -7,7 +7,7 @@ The server backend does a cycle every minute and check if the configuraion file 
 Once a valid configuration file has been loaded then it will start one new plot per cycle.
 
 
-##Installation
+## Installation
 
 `go install plotng/cmd/plotng`
 
@@ -15,7 +15,7 @@ Please note that I've not tested this on Windows / Mac.
 
 EDIT: Pre-built binaries for 64-bits Linux included in the release
 
-##Running Server (runs on the plotter)
+## Running Server (runs on the plotter)
 
 `
 plotng -config <json config file> -port <plotter port number, default: 8484>
@@ -34,7 +34,7 @@ The UI can run on any host and point back to the server using the host and port 
 plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 8484>
 `
 
-##Configuration File (JSON format)
+## Configuration File (JSON format)
 
 
     {
@@ -48,7 +48,7 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
         "ShowPlotLog": false
     }
 
-###Settings
+### Settings
 
 - Fingerprint : fingerprint passed to the chia command line tool (you can either use the fingerprint if the private has been installed on the plotter or use the following farmer/pool public key instead)
 - FarmerPublicKey : Farmer Public Key passed to the chia command line tool
