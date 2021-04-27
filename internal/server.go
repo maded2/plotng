@@ -85,7 +85,7 @@ func (server *Server) createNewPlot(config *Config) {
 	server.currentTarget++
 
 	targetDirSpace := server.getDiskSpaceAvailable(targetDir)
-	if (server.countActiveTarget(targetDir)+1)*PLOT_SIZE > targetDirSpace {
+	if config.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*PLOT_SIZE > targetDirSpace {
 		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/GB)
 		return
 	}

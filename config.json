@@ -8,5 +8,6 @@
   "TempDirectory": ["/media/eddie"],
   "TargetDirectory": ["/media/eddie"],
   "StaggeringDelay": 5,
-  "ShowPlotLog": false
+  "ShowPlotLog": false,
+  "DiskSpaceCheck": false
 }

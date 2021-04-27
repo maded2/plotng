@@ -19,6 +19,7 @@ type Config struct {
 	Buffers               int
 	StaggeringDelay       int
 	ShowPlotLog           bool
+	DiskSpaceCheck        bool
 }
 
 type PlotConfig struct {

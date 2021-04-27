@@ -14,7 +14,7 @@ import (
 const KB = uint64(1024)
 const MB = KB * KB
 const GB = KB * KB * KB
-const PLOT_SIZE = 105 * KB * KB * KB
+const PLOT_SIZE = 105 * GB
 
 const (
 	PlotRunning = iota
