@@ -64,4 +64,4 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 - StaggeringDelay : when the TargetDirectory wraps to the beginning, it will delays the next plot create by the specified minutes.
 - ShowPlotLog : shows the last 10 lines of the plot logs in the server log output.
 
-Please note PlotNG now skips any destination directory which does have 105GB is space.
+Please note PlotNG now skips any destination directory which have less than 105GB is space.
