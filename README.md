@@ -48,7 +48,8 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
         "TempDirectory": ["/media/eddie/plot1", "/media/eddie/plot2", , "/media/eddie/plot3"],
         "TargetDirectory": ["/media/eddie/dst1", "/media/eddie/dst2"],
         "StaggeringDelay": 30,
-        "ShowPlotLog": false
+        "ShowPlotLog": false,
+        "DiskSpaceCheck": false
     }
 
 ### Settings
@@ -63,5 +64,6 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 - TargetDirectory : list destination directories / drives.  The server process will choose the next directory path on the list and wraps to the beginning when it reaches the end.
 - StaggeringDelay : when the TargetDirectory wraps to the beginning, it will delays the next plot create by the specified minutes.
 - ShowPlotLog : shows the last 10 lines of the plot logs in the server log output.
+- DiskSpaceCheck : check if destination directories have enough disk space to hold a new plot (only tested on Linux, may not work on MacOS / Windows)
 
 Please note PlotNG now skips any destination directory which have less than 105GB is space.
