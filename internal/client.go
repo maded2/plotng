@@ -62,7 +62,7 @@ func (client *Client) displayActivePlots() {
 	for i, id := range idList {
 		plot := client.active[id]
 		client.plotTable.SetCell(i+1, 0, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-		client.plotTable.SetCell(i+1, 1, tview.NewTableCell(t.Sub(plot.StartTime).String()))
+		client.plotTable.SetCell(i+1, 1, tview.NewTableCell(plot.Duration(t)))
 		client.plotTable.SetCell(i+1, 2, tview.NewTableCell(plot.Phase))
 		client.plotTable.SetCell(i+1, 3, tview.NewTableCell(plot.PlotDir))
 		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(plot.TargetDir))
@@ -230,7 +230,7 @@ func (client *Client) drawActivePlots() {
 		client.lastTable.SetCell(i+1, 1, tview.NewTableCell(state))
 		client.lastTable.SetCell(i+1, 2, tview.NewTableCell(plot.Phase))
 		client.lastTable.SetCell(i+1, 3, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-		client.lastTable.SetCell(i+1, 4, tview.NewTableCell(plot.EndTime.Sub(plot.StartTime).String()))
+		client.lastTable.SetCell(i+1, 4, tview.NewTableCell(plot.Duration(plot.EndTime)))
 		client.lastTable.SetCell(i+1, 5, tview.NewTableCell(plot.PlotDir))
 		client.lastTable.SetCell(i+1, 6, tview.NewTableCell(plot.TargetDir))
 	}

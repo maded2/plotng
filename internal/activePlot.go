@@ -39,6 +39,16 @@ type ActivePlot struct {
 	Id    string
 }
 
+func (ap *ActivePlot) Duration(currentTime time.Time) string {
+	d := currentTime.Sub(ap.StartTime)
+	hour := d / time.Hour
+	d = d - hour*(60*60*1e9)
+	mins := d / time.Minute
+	d = d - mins*(60*1e9)
+	secs := d / time.Second
+	return fmt.Sprintf("%02d:%02d:%02d", hour, mins, secs)
+}
+
 func (ap *ActivePlot) String(showLog bool) string {
 	ap.lock.RLock()
 	state := "Unknown"
@@ -50,7 +60,7 @@ func (ap *ActivePlot) String(showLog bool) string {
 	case PlotFinished:
 		state = "Finished"
 	}
-	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.Id, state, ap.Phase, ap.StartTime.Format("2006-01-02 15:04:05"), time.Now().Sub(ap.StartTime).String(), ap.PlotDir, ap.TargetDir)
+	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.Id, state, ap.Phase, ap.StartTime.Format("2006-01-02 15:04:05"), ap.Duration(time.Now()), ap.PlotDir, ap.TargetDir)
 	if showLog {
 		for _, l := range ap.Tail {
 			s += fmt.Sprintf("\t%s", l)
