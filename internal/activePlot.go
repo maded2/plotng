@@ -3,7 +3,6 @@ package internal
 import (
 	"bufio"
 	"fmt"
-	"github.com/ricochet2200/go-disk-usage/du"
 	"io"
 	"log"
 	"os/exec"
@@ -13,6 +12,9 @@ import (
 )
 
 const KB = uint64(1024)
+const MB = KB * KB
+const GB = KB * KB * KB
+const PLOT_SIZE = 105 * KB * KB * KB
 
 const (
 	PlotRunning = iota
@@ -68,20 +70,6 @@ func (ap *ActivePlot) String(showLog bool) string {
 	}
 	ap.lock.RUnlock()
 	return s
-}
-
-func (ap *ActivePlot) CheckSpace() bool {
-	plot := du.NewDiskUsage(ap.PlotDir)
-	target := du.NewDiskUsage(ap.TargetDir)
-	if plot.Available() < 360*KB*KB*KB {
-		log.Printf("Not enough Plot directory space [%s]: %dGB", ap.PlotDir, plot.Available()/(KB*KB*KB))
-		return false
-	}
-	if target.Available() < 360*KB*KB*KB {
-		log.Printf("Not enough Target directory space [%s]: %dGB", ap.TargetDir, target.Available()/(KB*KB*KB))
-		return false
-	}
-	return true
 }
 
 func (ap *ActivePlot) RunPlot() {

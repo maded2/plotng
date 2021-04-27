@@ -83,6 +83,13 @@ func (server *Server) createNewPlot(config *Config) {
 	}
 	targetDir := config.TargetDirectory[server.currentTarget]
 	server.currentTarget++
+
+	targetDirSpace := server.getDiskSpaceAvailable(targetDir)
+	if (server.countActiveTarget(targetDir)+1)*PLOT_SIZE > targetDirSpace {
+		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/GB)
+		return
+	}
+
 	t := time.Now()
 	plot := &ActivePlot{
 		PlotId:          t.Unix(),
@@ -101,13 +108,22 @@ func (server *Server) createNewPlot(config *Config) {
 	go plot.RunPlot()
 }
 
+func (server *Server) countActiveTarget(path string) (count uint64) {
+	for _, plot := range server.active {
+		if plot.TargetDir == path {
+			count++
+		}
+	}
+	return
+}
+
 func (server *Server) getDiskSpaceAvailable(path string) uint64 {
 	d := du.NewDiskUsage(path)
 	return d.Available()
 }
 
 func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	log.Printf("New query: %s", req.URL.String())
+	//log.Printf("New query: %s", req.URL.String())
 	defer server.lock.RUnlock()
 	server.lock.RLock()
 

@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/gdamore/tcell/v2"
-	"github.com/ricochet2200/go-disk-usage/du"
 	"github.com/rivo/tview"
 	"net/http"
 	"sort"
@@ -120,14 +119,9 @@ func (client *Client) drawTargetTable(table *tview.Table, drawTarget bool) {
 	sort.Strings(pathList)
 	for i, path := range pathList {
 		table.SetCell(i+1, 0, tview.NewTableCell(path))
-		availableSpace := paths[path] / (KB * KB * KB)
+		availableSpace := paths[path] / GB
 		table.SetCell(i+1, 1, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
 	}
-}
-
-func (client *Client) getDiskSpaceAvailable(path string) uint64 {
-	d := du.NewDiskUsage(path)
-	return d.Available()
 }
 
 func (client *Client) setupUI() {
