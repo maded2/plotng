@@ -199,7 +199,7 @@ func (client *Client) drawActivePlots() {
 		client.plotTable.SetCell(i+1, 1, tview.NewTableCell(state))
 		client.plotTable.SetCell(i+1, 2, tview.NewTableCell(plot.Phase))
 		client.plotTable.SetCell(i+1, 3, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(t.Sub(plot.StartTime).String()))
+		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(plot.Duration(t)))
 		client.plotTable.SetCell(i+1, 5, tview.NewTableCell(plot.PlotDir))
 		client.plotTable.SetCell(i+1, 6, tview.NewTableCell(plot.TargetDir))
 		client.plotTable.SetCell(0, 5, tview.NewTableCell("Plot Dir"))
