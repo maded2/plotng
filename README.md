@@ -13,8 +13,8 @@ Once a valid configuration file has been loaded then it will start one new plot 
     cd plotng
     go install plotng/cmd/plotng
 
-Please note that I've not tested this on Windows / Mac.
-Pre-built binaries for 64-bits Linux included in the release
+Please note that I've not tested this on Windows / Mac.  (although one user confirmed it is working on MacOS)
+Pre-built binaries for 64-bits Windows/MacOS/Linux included in the release
 
 ## Running Server (runs on the plotter)
 
