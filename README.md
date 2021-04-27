@@ -1,9 +1,9 @@
-# Plotting Utility for Chia.Net
+# PlotNG - plotting utility for Chia.Net
 
 This utility consisted of server backend and UI which manages the chia plot creation.  
 It uses the chia command line interface to start the plot.  
 It will schedule new plots when a plot finishes as specified by the configuration file.
-The server backend does a cycle every minute and check if the configuraion file has been changed, if it detects that it has been changed then it reloads the configuration file.
+The server backend does a cycle every minute and check if the configuration file has been changed, if it detects that it has been changed then it reloads the configuration file.
 Once a valid configuration file has been loaded then it will start one new plot per cycle.
 
 
@@ -64,3 +64,4 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 - StaggeringDelay : when the TargetDirectory wraps to the beginning, it will delays the next plot create by the specified minutes.
 - ShowPlotLog : shows the last 10 lines of the plot logs in the server log output.
 
+Please note PlotNG now skips any destination directory which does have 105GB is space.
