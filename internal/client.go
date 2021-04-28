@@ -11,16 +11,17 @@ import (
 )
 
 type Client struct {
-	app         *tview.Application
-	plotTable   *tview.Table
-	targetTable *tview.Table
-	tmpTable    *tview.Table
-	lastTable   *tview.Table
-	logTextbox  *tview.TextView
-	active      map[int64]*ActivePlot
-	host        string
-	port        int
-	msg         *Msg
+	app                 *tview.Application
+	plotTable           *tview.Table
+	targetTable         *tview.Table
+	tmpTable            *tview.Table
+	lastTable           *tview.Table
+	logTextbox          *tview.TextView
+	active              map[int64]*ActivePlot
+	host                string
+	port                int
+	msg                 *Msg
+	archivedTableActive bool
 }
 
 func (client *Client) ProcessLoop(host string, port int) {
@@ -129,7 +130,7 @@ func (client *Client) setupUI() {
 	client.plotTable = tview.NewTable()
 	client.plotTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Active Plots")
 	client.plotTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
-	client.plotTable.SetSelectionChangedFunc(client.selectPlot)
+	client.plotTable.SetSelectionChangedFunc(client.selectActivePlot)
 
 	client.tmpTable = tview.NewTable()
 	client.tmpTable.SetSelectable(false, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Plot Directories")
@@ -140,7 +141,8 @@ func (client *Client) setupUI() {
 	client.targetTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
 
 	client.lastTable = tview.NewTable()
-	client.lastTable.SetSelectable(false, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Archived Plots")
+	client.lastTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Archived Plots")
+	client.lastTable.SetSelectionChangedFunc(client.selectArchivedPlot)
 
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
@@ -161,7 +163,7 @@ func (client *Client) setupUI() {
 
 	client.app = tview.NewApplication()
 	client.app.SetRoot(mainPanel, true)
-	client.app.EnableMouse(false)
+	client.app.EnableMouse(true)
 }
 
 func (client *Client) drawActivePlots() {
@@ -231,13 +233,26 @@ func (client *Client) drawActivePlots() {
 
 }
 
-func (client *Client) selectPlot(row int, column int) {
+func (client *Client) selectActivePlot(row int, column int) {
 	s := ""
 	if client.msg == nil || row <= 0 || row > len(client.msg.Actives) {
 		client.logTextbox.SetText(s)
 		return
 	}
 	plot := client.msg.Actives[row-1]
+	for _, line := range plot.Tail {
+		s += line
+	}
+	client.logTextbox.SetText(s)
+}
+
+func (client *Client) selectArchivedPlot(row int, column int) {
+	s := ""
+	if client.msg == nil || row <= 0 || row > len(client.msg.Archived) {
+		client.logTextbox.SetText(s)
+		return
+	}
+	plot := client.msg.Archived[row-1]
 	for _, line := range plot.Tail {
 		s += line
 	}
