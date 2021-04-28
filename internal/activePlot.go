@@ -137,8 +137,8 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 			}
 			ap.lock.Lock()
 			ap.Tail = append(ap.Tail, s)
-			if len(ap.Tail) > 10 {
-				ap.Tail = ap.Tail[len(ap.Tail)-10:]
+			if len(ap.Tail) > 20 {
+				ap.Tail = ap.Tail[len(ap.Tail)-20:]
 			}
 			ap.lock.Unlock()
 		}
