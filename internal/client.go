@@ -130,7 +130,7 @@ func (client *Client) setupUI() {
 	client.plotTable = tview.NewTable()
 	client.plotTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Active Plots")
 	client.plotTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
-	client.plotTable.SetSelectionChangedFunc(client.selectActivePlot)
+	client.plotTable.SetSelectionChangedFunc(client.selectActivePlot).SetFixed(1, 6)
 
 	client.tmpTable = tview.NewTable()
 	client.tmpTable.SetSelectable(false, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Plot Directories")
@@ -142,7 +142,8 @@ func (client *Client) setupUI() {
 
 	client.lastTable = tview.NewTable()
 	client.lastTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Archived Plots")
-	client.lastTable.SetSelectionChangedFunc(client.selectArchivedPlot)
+	client.lastTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.lastTable.SetSelectionChangedFunc(client.selectArchivedPlot).SetFixed(1, 6)
 
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
@@ -175,10 +176,9 @@ func (client *Client) drawActivePlots() {
 	client.plotTable.SetCell(0, 1, tview.NewTableCell("Status"))
 	client.plotTable.SetCell(0, 2, tview.NewTableCell("Phase"))
 	client.plotTable.SetCell(0, 3, tview.NewTableCell("Start Time"))
-	client.plotTable.SetCell(0, 3, tview.NewTableCell("End Time"))
-	client.plotTable.SetCell(0, 5, tview.NewTableCell("Duration"))
-	client.plotTable.SetCell(0, 6, tview.NewTableCell("Plot Dir"))
-	client.plotTable.SetCell(0, 7, tview.NewTableCell("Dest Dir"))
+	client.plotTable.SetCell(0, 4, tview.NewTableCell("Duration"))
+	client.plotTable.SetCell(0, 5, tview.NewTableCell("Plot Dir"))
+	client.plotTable.SetCell(0, 6, tview.NewTableCell("Dest Dir"))
 
 	t := time.Now()
 	for i, plot := range client.msg.Actives {
@@ -200,6 +200,7 @@ func (client *Client) drawActivePlots() {
 		client.plotTable.SetCell(i+1, 5, tview.NewTableCell(plot.PlotDir))
 		client.plotTable.SetCell(i+1, 6, tview.NewTableCell(plot.TargetDir))
 	}
+	client.plotTable.ScrollToBeginning()
 
 	client.lastTable.Clear()
 	client.lastTable.SetCell(0, 0, tview.NewTableCell("Plot Id"))
@@ -231,6 +232,7 @@ func (client *Client) drawActivePlots() {
 		client.lastTable.SetCell(i+1, 6, tview.NewTableCell(plot.PlotDir))
 		client.lastTable.SetCell(i+1, 7, tview.NewTableCell(plot.TargetDir))
 	}
+	client.lastTable.ScrollToBeginning()
 
 }
 
