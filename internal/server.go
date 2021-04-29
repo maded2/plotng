@@ -84,6 +84,12 @@ func (server *Server) createNewPlot(config *Config) {
 	targetDir := config.TargetDirectory[server.currentTarget]
 	server.currentTarget++
 
+	if config.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= config.MaxActivePlotPerTarget {
+		return
+	}
+
+	server.targetDelayStartTime = time.Now().Add(time.Duration(config.DelaysBetweenPlot) * time.Minute)
+
 	targetDirSpace := server.getDiskSpaceAvailable(targetDir)
 	if config.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*PLOT_SIZE > targetDirSpace {
 		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/GB)

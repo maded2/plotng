@@ -9,17 +9,19 @@ import (
 )
 
 type Config struct {
-	TargetDirectory       []string
-	TempDirectory         []string
-	NumberOfParallelPlots int
-	Fingerprint           string
-	FarmerPublicKey       string
-	PoolPublicKey         string
-	Threads               int
-	Buffers               int
-	StaggeringDelay       int
-	ShowPlotLog           bool
-	DiskSpaceCheck        bool
+	TargetDirectory        []string
+	TempDirectory          []string
+	NumberOfParallelPlots  int
+	Fingerprint            string
+	FarmerPublicKey        string
+	PoolPublicKey          string
+	Threads                int
+	Buffers                int
+	StaggeringDelay        int
+	ShowPlotLog            bool
+	DiskSpaceCheck         bool
+	DelaysBetweenPlot      int
+	MaxActivePlotPerTarget int
 }
 
 type PlotConfig struct {
