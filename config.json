@@ -5,9 +5,11 @@
   "Threads": 0,
   "Buffers": 0,
   "NumberOfParallelPlots": 0,
-  "TempDirectory": ["/media/eddie"],
-  "TargetDirectory": ["/media/eddie"],
+  "TempDirectory": ["/media/eddie/tmp1", "/media/eddie/tmp2", "/media/eddie/tmp3"],
+  "TargetDirectory": ["/media/eddie/target1", "/media/eddie/target2"],
   "StaggeringDelay": 5,
   "ShowPlotLog": false,
-  "DiskSpaceCheck": false
+  "DiskSpaceCheck": false,
+  "DelaysBetweenPlot": 0,
+  "MaxActivePlotPerTarget": 0
 }

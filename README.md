@@ -65,5 +65,7 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 - StaggeringDelay : when the TargetDirectory wraps to the beginning, it will delays the next plot create by the specified minutes.
 - ShowPlotLog : shows the last 10 lines of the plot logs in the server log output.
 - DiskSpaceCheck : check if destination directories have enough disk space to hold a new plot (only tested on Linux, may not work on MacOS / Windows)
+- DelaysBetweenPlot : Delays in mins between starting a new plot (minimum is 1 min)
+- MaxActivePlotPerTarget : Maximum active plots per target directory (default: 0 - no limit)
 
-Please note PlotNG now skips any destination directory which have less than 105GB is space.
+Please note PlotNG now skips any destination directory which have less than 105GB is space, if you set DiskSpaceCheck to true.
