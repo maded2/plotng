@@ -33,6 +33,7 @@ type ActivePlot struct {
 	PoolPublicKey   string
 	Threads         int
 	Buffers         int
+	BitField        bool
 
 	Phase string
 	Tail  []string
@@ -96,6 +97,9 @@ func (ap *ActivePlot) RunPlot() {
 	}
 	if ap.Buffers > 0 {
 		args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
+	}
+	if ap.BitField == false {
+		args = append(args, "-e")
 	}
 
 	cmd := exec.Command("chia", args...)
