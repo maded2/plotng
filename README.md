@@ -14,7 +14,7 @@ Once a valid configuration file has been loaded then it will start one new plot 
     go install plotng/cmd/plotng
 
 Please note that I've not tested this on Windows / Mac.  (although one user confirmed it is working on MacOS)
-Pre-built binaries for 64-bits Windows/MacOS/Linux included in the release
+Pre-built binaries for 64-bits Windows/MacOS/Linux included in the [release](../../releases)
 
 ## Running Server (runs on the plotter)
 
@@ -24,7 +24,7 @@ plotng -config <json config file> -port <plotter port number, default: 8484>
 
 **Please note**: chia enviornment should be activated before starting plotng
 
-## Running UI (run anyway)
+## Running Monitoring UI (run anyway)
 
 ![PlotNG UI](plotng.png)
 
@@ -44,12 +44,14 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
         "PoolPublicKey": "",
         "Threads": 0,
         "Buffers": 0,
-        "NumberOfParallelPlots": 3,
-        "TempDirectory": ["/media/eddie/plot1", "/media/eddie/plot2", , "/media/eddie/plot3"],
-        "TargetDirectory": ["/media/eddie/dst1", "/media/eddie/dst2"],
-        "StaggeringDelay": 30,
+        "NumberOfParallelPlots": 0,
+        "TempDirectory": ["/media/eddie/tmp1", "/media/eddie/tmp2", "/media/eddie/tmp3"],
+        "TargetDirectory": ["/media/eddie/target1", "/media/eddie/target2"],
+        "StaggeringDelay": 5,
         "ShowPlotLog": false,
-        "DiskSpaceCheck": false
+        "DiskSpaceCheck": false,
+        "DelaysBetweenPlot": 0,
+        "MaxActivePlotPerTarget": 0
     }
 
 ### Settings
