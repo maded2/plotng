@@ -106,6 +106,7 @@ func (server *Server) createNewPlot(config *Config) {
 		PoolPublicKey:   config.PoolPublicKey,
 		Threads:         config.Threads,
 		Buffers:         config.Buffers,
+		DisableBitField: config.DisableBitField,
 		Phase:           "NA",
 		Tail:            nil,
 		State:           PlotRunning,

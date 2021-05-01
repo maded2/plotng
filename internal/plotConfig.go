@@ -17,6 +17,7 @@ type Config struct {
 	PoolPublicKey          string
 	Threads                int
 	Buffers                int
+	DisableBitField        bool
 	StaggeringDelay        int
 	ShowPlotLog            bool
 	DiskSpaceCheck         bool
