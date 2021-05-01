@@ -4,7 +4,6 @@
   "PoolPublicKey": "",
   "Threads": 0,
   "Buffers": 0,
-  "BitField": true,
   "NumberOfParallelPlots": 0,
   "TempDirectory": ["/media/eddie/tmp1", "/media/eddie/tmp2", "/media/eddie/tmp3"],
   "TargetDirectory": ["/media/eddie/target1", "/media/eddie/target2"],

@@ -33,7 +33,7 @@ type ActivePlot struct {
 	PoolPublicKey   string
 	Threads         int
 	Buffers         int
-	BitField        bool
+	DisableBitField bool
 
 	Phase string
 	Tail  []string
@@ -98,7 +98,7 @@ func (ap *ActivePlot) RunPlot() {
 	if ap.Buffers > 0 {
 		args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
 	}
-	if ap.BitField == false {
+	if ap.DisableBitField {
 		args = append(args, "-e")
 	}
 

@@ -44,7 +44,6 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
         "PoolPublicKey": "",
         "Threads": 0,
         "Buffers": 0,
-        "BitField": true,
         "NumberOfParallelPlots": 0,
         "TempDirectory": ["/media/eddie/tmp1", "/media/eddie/tmp2", "/media/eddie/tmp3"],
         "TargetDirectory": ["/media/eddie/target1", "/media/eddie/target2"],
@@ -62,7 +61,7 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 - PoolPublicKey : Pool Public Key passed to the chia command line tool
 - Threads : number of threads use by the chia command line tool.  If the value is zero or missing then chia will use the default
 - Buffers : number of buffers use by the chia command line tool.  If the value is zero or missing then chia will use the default
-- BitField : With BitField your plotting gets faster. Set false if your CPU designed before 2010.
+- DisableBitField : With BitField your plotting almost always gets faster. Set true if your CPU designed before 2010.
 - NumberOfParallelPlots : number of parallel plots to create.  Set to zero for orderly shutdown
 - TempDirectory : list of plot directories / drives.  The server process will choose the next directory path on the list and wraps to the beginning when it reaches the end.
 - TargetDirectory : list destination directories / drives.  The server process will choose the next directory path on the list and wraps to the beginning when it reaches the end.
