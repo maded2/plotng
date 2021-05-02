@@ -96,32 +96,58 @@ func (client *Client) checkServer() {
 		client.logTextbox.SetText(err.Error())
 	}
 
-	client.drawTargetTable(client.targetTable, true)
-	client.drawTargetTable(client.tmpTable, false)
+	client.drawTempTable()
+	client.drawTargetTable()
 	client.drawActivePlots()
 	client.app.Draw()
 }
 
-func (client *Client) drawTargetTable(table *tview.Table, drawTarget bool) {
+func (client *Client) drawTempTable() {
 	if client.msg == nil {
 		return
 	}
-	table.Clear()
-	table.SetCell(0, 0, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	table.SetCell(0, 1, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	paths := client.msg.TargetDirs
-	if !drawTarget {
-		paths = client.msg.TempDirs
-	}
+	client.tmpTable.Clear()
+	client.tmpTable.SetCell(0, 0, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	client.tmpTable.SetCell(0, 1, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	client.tmpTable.SetCell(0, 2, tview.NewTableCell("Avg Phase1").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	client.tmpTable.SetCell(0, 3, tview.NewTableCell("Avg Phase2").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	client.tmpTable.SetCell(0, 4, tview.NewTableCell("Avg Phase3").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	client.tmpTable.SetCell(0, 5, tview.NewTableCell("Avg Phase4").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+
 	pathList := []string{}
-	for k, _ := range paths {
+	for k, _ := range client.msg.TempDirs {
 		pathList = append(pathList, k)
 	}
 	sort.Strings(pathList)
 	for i, path := range pathList {
-		table.SetCell(i+1, 0, tview.NewTableCell(path))
-		availableSpace := paths[path] / GB
-		table.SetCell(i+1, 1, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 0, tview.NewTableCell(path))
+		availableSpace := client.msg.TempDirs[path] / GB
+		client.tmpTable.SetCell(i+1, 1, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 2, tview.NewTableCell(client.AvgPhase1()).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 3, tview.NewTableCell(client.AvgPhase2()).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 4, tview.NewTableCell(client.AvgPhase3()).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 5, tview.NewTableCell(client.AvgPhase4()).SetAlign(tview.AlignRight))
+	}
+}
+
+func (client *Client) drawTargetTable() {
+	if client.msg == nil {
+		return
+	}
+	client.targetTable.Clear()
+	client.targetTable.SetCell(0, 0, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	client.targetTable.SetCell(0, 1, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	client.targetTable.SetCell(0, 2, tview.NewTableCell("Avg Plot Time").SetSelectable(false).SetTextColor(tcell.ColorYellow))
+	pathList := []string{}
+	for k, _ := range client.msg.TargetDirs {
+		pathList = append(pathList, k)
+	}
+	sort.Strings(pathList)
+	for i, path := range pathList {
+		client.targetTable.SetCell(i+1, 0, tview.NewTableCell(path))
+		availableSpace := client.msg.TargetDirs[path] / GB
+		client.targetTable.SetCell(i+1, 1, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
+		client.targetTable.SetCell(i+1, 2, tview.NewTableCell(client.computeAvgTargetTime(path)).SetAlign(tview.AlignRight))
 	}
 }
 
@@ -175,10 +201,11 @@ func (client *Client) drawActivePlots() {
 	client.plotTable.SetCell(0, 0, tview.NewTableCell("Plot Id"))
 	client.plotTable.SetCell(0, 1, tview.NewTableCell("Status"))
 	client.plotTable.SetCell(0, 2, tview.NewTableCell("Phase"))
-	client.plotTable.SetCell(0, 3, tview.NewTableCell("Start Time"))
-	client.plotTable.SetCell(0, 4, tview.NewTableCell("Duration"))
-	client.plotTable.SetCell(0, 5, tview.NewTableCell("Plot Dir"))
-	client.plotTable.SetCell(0, 6, tview.NewTableCell("Dest Dir"))
+	client.plotTable.SetCell(0, 3, tview.NewTableCell("Progress"))
+	client.plotTable.SetCell(0, 4, tview.NewTableCell("Start Time"))
+	client.plotTable.SetCell(0, 5, tview.NewTableCell("Duration"))
+	client.plotTable.SetCell(0, 6, tview.NewTableCell("Plot Dir"))
+	client.plotTable.SetCell(0, 7, tview.NewTableCell("Dest Dir"))
 
 	t := time.Now()
 	for i, plot := range client.msg.Actives {
@@ -194,11 +221,12 @@ func (client *Client) drawActivePlots() {
 
 		client.plotTable.SetCell(i+1, 0, tview.NewTableCell(plot.Id))
 		client.plotTable.SetCell(i+1, 1, tview.NewTableCell(state))
-		client.plotTable.SetCell(i+1, 2, tview.NewTableCell(plot.Phase))
-		client.plotTable.SetCell(i+1, 3, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(plot.Duration(t)))
-		client.plotTable.SetCell(i+1, 5, tview.NewTableCell(plot.PlotDir))
-		client.plotTable.SetCell(i+1, 6, tview.NewTableCell(plot.TargetDir))
+		client.plotTable.SetCell(i+1, 2, tview.NewTableCell(plot.Phase).SetAlign(tview.AlignRight))
+		client.plotTable.SetCell(i+1, 3, tview.NewTableCell(plot.Progress).SetAlign(tview.AlignRight))
+		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
+		client.plotTable.SetCell(i+1, 5, tview.NewTableCell(plot.Duration(t)))
+		client.plotTable.SetCell(i+1, 6, tview.NewTableCell(plot.PlotDir))
+		client.plotTable.SetCell(i+1, 7, tview.NewTableCell(plot.TargetDir))
 	}
 	client.plotTable.ScrollToBeginning()
 
@@ -260,4 +288,89 @@ func (client *Client) selectArchivedPlot(row int, column int) {
 		s += line
 	}
 	client.logTextbox.SetText(s)
+}
+
+func (client *Client) computeAvgTargetTime(path string) string {
+	var count int64
+	var total int64
+	for _, plot := range client.msg.Archived {
+		if plot.TargetDir != path || plot.State != PlotFinished {
+			continue
+		}
+		count++
+		total = total + int64(plot.EndTime.Sub(plot.StartTime))
+	}
+	if count == 0 {
+		return ""
+	} else {
+		return DurationString(time.Duration(total / count))
+	}
+}
+
+func (client *Client) AvgPhase1() string {
+	var count int64
+	var total int64
+	for _, plot := range client.msg.Archived {
+		if plot.Phase1Time.IsZero() || plot.State != PlotFinished {
+			continue
+		}
+		count++
+		total = total + int64(plot.Phase1Time.Sub(plot.StartTime))
+	}
+	if count == 0 {
+		return ""
+	} else {
+		return DurationString(time.Duration(total / count))
+	}
+}
+
+func (client *Client) AvgPhase2() string {
+	var count int64
+	var total int64
+	for _, plot := range client.msg.Archived {
+		if plot.Phase1Time.IsZero() || plot.Phase2Time.IsZero() || plot.State != PlotFinished {
+			continue
+		}
+		count++
+		total = total + int64(plot.Phase2Time.Sub(plot.Phase1Time))
+	}
+	if count == 0 {
+		return ""
+	} else {
+		return DurationString(time.Duration(total / count))
+	}
+}
+
+func (client *Client) AvgPhase3() string {
+	var count int64
+	var total int64
+	for _, plot := range client.msg.Archived {
+		if plot.Phase2Time.IsZero() || plot.Phase3Time.IsZero() || plot.State != PlotFinished {
+			continue
+		}
+		count++
+		total = total + int64(plot.Phase3Time.Sub(plot.Phase2Time))
+	}
+	if count == 0 {
+		return ""
+	} else {
+		return DurationString(time.Duration(total / count))
+	}
+}
+
+func (client *Client) AvgPhase4() string {
+	var count int64
+	var total int64
+	for _, plot := range client.msg.Archived {
+		if plot.Phase3Time.IsZero() || plot.State != PlotFinished {
+			continue
+		}
+		count++
+		total = total + int64(plot.EndTime.Sub(plot.Phase3Time))
+	}
+	if count == 0 {
+		return ""
+	} else {
+		return DurationString(time.Duration(total / count))
+	}
 }

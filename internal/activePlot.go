@@ -35,21 +35,19 @@ type ActivePlot struct {
 	Buffers         int
 	DisableBitField bool
 
-	Phase string
-	Tail  []string
-	State int
-	lock  sync.RWMutex
-	Id    string
+	Phase      string
+	Tail       []string
+	State      int
+	lock       sync.RWMutex
+	Id         string
+	Progress   string
+	Phase1Time time.Time
+	Phase2Time time.Time
+	Phase3Time time.Time
 }
 
 func (ap *ActivePlot) Duration(currentTime time.Time) string {
-	d := currentTime.Sub(ap.StartTime)
-	hour := d / time.Hour
-	d = d - hour*(60*60*1e9)
-	mins := d / time.Minute
-	d = d - mins*(60*1e9)
-	secs := d / time.Second
-	return fmt.Sprintf("%02d:%02d:%02d", hour, mins, secs)
+	return DurationString(currentTime.Sub(ap.StartTime))
 }
 
 func (ap *ActivePlot) String(showLog bool) string {
@@ -118,11 +116,12 @@ func (ap *ActivePlot) RunPlot() {
 	} else {
 		go ap.processLogs(stdout)
 	}
-	if err := cmd.Run(); err != nil {
-		ap.State = PlotError
-		log.Printf("Plotting Exit with Error: %s", err)
-		return
-	}
+	log.Println(cmd.String())
+	//if err := cmd.Run(); err != nil {
+	//	ap.State = PlotError
+	//	log.Printf("Plotting Exit with Error: %s", err)
+	//	return
+	//}
 	ap.State = PlotFinished
 	return
 }
@@ -135,9 +134,23 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 		} else {
 			if strings.HasPrefix(s, "Starting phase ") {
 				ap.Phase = s[15:18]
+				switch ap.Phase {
+				case "2/4":
+					ap.Phase1Time = time.Now()
+				case "3/4":
+					ap.Phase2Time = time.Now()
+				case "4/4":
+					ap.Phase3Time = time.Now()
+				}
 			}
 			if strings.HasPrefix(s, "ID: ") {
 				ap.Id = strings.TrimSuffix(s[4:], "\n")
+			}
+			for phaseStr, progress := range progressTable {
+				if strings.Index(s, phaseStr) >= 0 {
+					ap.Progress = progress
+					break
+				}
 			}
 			ap.lock.Lock()
 			ap.Tail = append(ap.Tail, s)
@@ -148,4 +161,31 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 		}
 	}
 	return
+}
+
+/*
+Progress from Chia docs
+https://github.com/Chia-Network/chia-blockchain/wiki/Beginners-Guide#create-a-plot
+*/
+var progressTable = map[string]string{
+	"Computing table 1":          "1%",
+	"Computing table 2":          "6%",
+	"Computing table 3":          "12%",
+	"Computing table 4":          "20%",
+	"Computing table 5":          "28%",
+	"Computing table 6":          "36%",
+	"Computing table 7":          "42%",
+	"Backpropagating on table 7": "43%",
+	"Backpropagating on table 6": "48%",
+	"Backpropagating on table 5": "51%",
+	"Backpropagating on table 4": "55%",
+	"Backpropagating on table 3": "58%",
+	"Backpropagating on table 2": "61%",
+	"Compressing tables 1 and 2": "66%",
+	"Compressing tables 2 and 3": "73%",
+	"Compressing tables 3 and 4": "79%",
+	"Compressing tables 4 and 5": "85%",
+	"Compressing tables 5 and 6": "92%",
+	"Compressing tables 6 and 7": "98%",
+	"Write checkpoint tables":    "100%",
 }
