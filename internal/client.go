@@ -41,35 +41,6 @@ func (client *Client) ProcessLoop(host string, port int) {
 	}
 }
 
-func (client *Client) displayActivePlots() {
-	idList := []int64{}
-	for k, _ := range client.active {
-		idList = append(idList, k)
-	}
-	sort.Slice(idList, func(i, j int) bool {
-		return idList[i] < idList[j]
-	})
-
-	client.plotTable.Clear()
-	client.plotTable.SetCell(0, 0, tview.NewTableCell("Start").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.plotTable.SetCell(0, 1, tview.NewTableCell("Duration").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.plotTable.SetCell(0, 2, tview.NewTableCell("Phase").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.plotTable.SetCell(0, 3, tview.NewTableCell("Temp Dir").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.plotTable.SetCell(0, 4, tview.NewTableCell("Target Dir").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.plotTable.SetCell(0, 5, tview.NewTableCell("Id").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-
-	t := time.Now()
-	for i, id := range idList {
-		plot := client.active[id]
-		client.plotTable.SetCell(i+1, 0, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-		client.plotTable.SetCell(i+1, 1, tview.NewTableCell(plot.Duration(t)))
-		client.plotTable.SetCell(i+1, 2, tview.NewTableCell(plot.Phase))
-		client.plotTable.SetCell(i+1, 3, tview.NewTableCell(plot.PlotDir))
-		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(plot.TargetDir))
-		client.plotTable.SetCell(i+1, 5, tview.NewTableCell(plot.Id))
-	}
-}
-
 func (client *Client) checkServer() {
 	c := &http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/", client.host, client.port), nil)
@@ -206,6 +177,7 @@ func (client *Client) drawActivePlots() {
 	client.plotTable.SetCell(0, 5, tview.NewTableCell("Duration"))
 	client.plotTable.SetCell(0, 6, tview.NewTableCell("Plot Dir"))
 	client.plotTable.SetCell(0, 7, tview.NewTableCell("Dest Dir"))
+	client.plotTable.SetTitle(fmt.Sprintf(" Active Plots [%d] ", len(client.msg.Actives)))
 
 	t := time.Now()
 	for i, plot := range client.msg.Actives {
@@ -239,6 +211,7 @@ func (client *Client) drawActivePlots() {
 	client.lastTable.SetCell(0, 5, tview.NewTableCell("Duration"))
 	client.lastTable.SetCell(0, 6, tview.NewTableCell("Plot Dir"))
 	client.lastTable.SetCell(0, 7, tview.NewTableCell("Dest Dir"))
+	client.lastTable.SetTitle(fmt.Sprintf(" Archied Plots [%d] ", len(client.msg.Archived)))
 
 	for i, plot := range client.msg.Archived {
 		state := "Unknown"
