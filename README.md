@@ -27,7 +27,7 @@ plotng -config <json config file> -port <plotter port number, default: 8484>
 
 **Please note**: chia enviornment should be activated before starting plotng
 
-## Running Monitoring UI (run anyway)
+## Running Monitoring UI (run anywhere)
 
 ![PlotNG UI](plotng.png)
 
