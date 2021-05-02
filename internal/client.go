@@ -307,11 +307,11 @@ func (client *Client) computeAvgTargetTime(path string) string {
 	}
 }
 
-func (client *Client) AvgPhase1() string {
+func (client *Client) AvgPhase1(path string) string {
 	var count int64
 	var total int64
 	for _, plot := range client.msg.Archived {
-		if plot.Phase1Time.IsZero() || plot.State != PlotFinished {
+		if plot.PlotDir != path || plot.Phase1Time.IsZero() || plot.State != PlotFinished {
 			continue
 		}
 		count++
@@ -324,11 +324,11 @@ func (client *Client) AvgPhase1() string {
 	}
 }
 
-func (client *Client) AvgPhase2() string {
+func (client *Client) AvgPhase2(path string) string {
 	var count int64
 	var total int64
 	for _, plot := range client.msg.Archived {
-		if plot.Phase1Time.IsZero() || plot.Phase2Time.IsZero() || plot.State != PlotFinished {
+		if plot.PlotDir != path || plot.Phase1Time.IsZero() || plot.Phase2Time.IsZero() || plot.State != PlotFinished {
 			continue
 		}
 		count++
@@ -341,11 +341,11 @@ func (client *Client) AvgPhase2() string {
 	}
 }
 
-func (client *Client) AvgPhase3() string {
+func (client *Client) AvgPhase3(path string) string {
 	var count int64
 	var total int64
 	for _, plot := range client.msg.Archived {
-		if plot.Phase2Time.IsZero() || plot.Phase3Time.IsZero() || plot.State != PlotFinished {
+		if plot.PlotDir != path || plot.Phase2Time.IsZero() || plot.Phase3Time.IsZero() || plot.State != PlotFinished {
 			continue
 		}
 		count++
@@ -358,11 +358,11 @@ func (client *Client) AvgPhase3() string {
 	}
 }
 
-func (client *Client) AvgPhase4() string {
+func (client *Client) AvgPhase4(path string) string {
 	var count int64
 	var total int64
 	for _, plot := range client.msg.Archived {
-		if plot.Phase3Time.IsZero() || plot.State != PlotFinished {
+		if plot.PlotDir != path || plot.Phase3Time.IsZero() || plot.State != PlotFinished {
 			continue
 		}
 		count++
