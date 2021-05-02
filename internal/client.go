@@ -123,10 +123,10 @@ func (client *Client) drawTempTable() {
 		client.tmpTable.SetCell(i+1, 0, tview.NewTableCell(path))
 		availableSpace := client.msg.TempDirs[path] / GB
 		client.tmpTable.SetCell(i+1, 1, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
-		client.tmpTable.SetCell(i+1, 2, tview.NewTableCell(client.AvgPhase1()).SetAlign(tview.AlignRight))
-		client.tmpTable.SetCell(i+1, 3, tview.NewTableCell(client.AvgPhase2()).SetAlign(tview.AlignRight))
-		client.tmpTable.SetCell(i+1, 4, tview.NewTableCell(client.AvgPhase3()).SetAlign(tview.AlignRight))
-		client.tmpTable.SetCell(i+1, 5, tview.NewTableCell(client.AvgPhase4()).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 2, tview.NewTableCell(client.AvgPhase1(path)).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 3, tview.NewTableCell(client.AvgPhase2(path)).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 4, tview.NewTableCell(client.AvgPhase3(path)).SetAlign(tview.AlignRight))
+		client.tmpTable.SetCell(i+1, 5, tview.NewTableCell(client.AvgPhase4(path)).SetAlign(tview.AlignRight))
 	}
 }
 
