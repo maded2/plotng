@@ -12,5 +12,5 @@
   "DiskSpaceCheck": false,
   "DelaysBetweenPlot": 0,
   "MaxActivePlotPerTarget": 0,
-  "DisableBitField": true
+  "DisableBitField": false
 }
