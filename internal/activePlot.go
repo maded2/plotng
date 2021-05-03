@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -120,6 +122,7 @@ func (ap *ActivePlot) RunPlot() {
 	if err := cmd.Run(); err != nil {
 		ap.State = PlotError
 		log.Printf("Plotting Exit with Error: %s", err)
+		ap.cleanup()
 		return
 	}
 	ap.State = PlotFinished
@@ -161,6 +164,23 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 		}
 	}
 	return
+}
+
+func (ap *ActivePlot) cleanup() {
+	if len(ap.Id) == 0 {
+		return
+	}
+	if fileList, err := ioutil.ReadDir(ap.PlotDir); err == nil {
+		for _, file := range fileList {
+			if strings.Index(file.Name(), ap.Id) >= 0 && strings.HasSuffix(file.Name(), ".tmp") {
+				if err := os.Remove(file.Name()); err == nil {
+					log.Printf("File: %s deleted\n", file.Name())
+				} else {
+					log.Printf("Failed to delete file: %s\n", file.Name())
+				}
+			}
+		}
+	}
 }
 
 /*
