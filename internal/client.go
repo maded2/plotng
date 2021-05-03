@@ -170,14 +170,13 @@ func (client *Client) drawActivePlots() {
 	}
 	client.plotTable.Clear()
 	client.plotTable.SetCell(0, 0, tview.NewTableCell("Plot Id"))
-	client.plotTable.SetCell(0, 1, tview.NewTableCell("PID"))
-	client.plotTable.SetCell(0, 2, tview.NewTableCell("Status"))
-	client.plotTable.SetCell(0, 3, tview.NewTableCell("Phase"))
-	client.plotTable.SetCell(0, 4, tview.NewTableCell("Progress"))
-	client.plotTable.SetCell(0, 5, tview.NewTableCell("Start Time"))
-	client.plotTable.SetCell(0, 6, tview.NewTableCell("Duration"))
-	client.plotTable.SetCell(0, 7, tview.NewTableCell("Plot Dir"))
-	client.plotTable.SetCell(0, 8, tview.NewTableCell("Dest Dir"))
+	client.plotTable.SetCell(0, 1, tview.NewTableCell("Status"))
+	client.plotTable.SetCell(0, 2, tview.NewTableCell("Phase"))
+	client.plotTable.SetCell(0, 3, tview.NewTableCell("Progress"))
+	client.plotTable.SetCell(0, 4, tview.NewTableCell("Start Time"))
+	client.plotTable.SetCell(0, 5, tview.NewTableCell("Duration"))
+	client.plotTable.SetCell(0, 6, tview.NewTableCell("Plot Dir"))
+	client.plotTable.SetCell(0, 7, tview.NewTableCell("Dest Dir"))
 	client.plotTable.SetTitle(fmt.Sprintf(" Active Plots [%d] ", len(client.msg.Actives)))
 
 	t := time.Now()
@@ -193,14 +192,13 @@ func (client *Client) drawActivePlots() {
 		}
 
 		client.plotTable.SetCell(i+1, 0, tview.NewTableCell(plot.Id))
-		client.plotTable.SetCell(i+1, 1, tview.NewTableCell(fmt.Sprintf("%d", plot.Pid)))
-		client.plotTable.SetCell(i+1, 2, tview.NewTableCell(state))
-		client.plotTable.SetCell(i+1, 3, tview.NewTableCell(plot.Phase).SetAlign(tview.AlignRight))
-		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(plot.Progress).SetAlign(tview.AlignRight))
-		client.plotTable.SetCell(i+1, 5, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-		client.plotTable.SetCell(i+1, 6, tview.NewTableCell(plot.Duration(t)))
-		client.plotTable.SetCell(i+1, 7, tview.NewTableCell(plot.PlotDir))
-		client.plotTable.SetCell(i+1, 8, tview.NewTableCell(plot.TargetDir))
+		client.plotTable.SetCell(i+1, 1, tview.NewTableCell(state))
+		client.plotTable.SetCell(i+1, 2, tview.NewTableCell(plot.Phase).SetAlign(tview.AlignRight))
+		client.plotTable.SetCell(i+1, 3, tview.NewTableCell(plot.Progress).SetAlign(tview.AlignRight))
+		client.plotTable.SetCell(i+1, 4, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
+		client.plotTable.SetCell(i+1, 5, tview.NewTableCell(plot.Duration(t)))
+		client.plotTable.SetCell(i+1, 6, tview.NewTableCell(plot.PlotDir))
+		client.plotTable.SetCell(i+1, 7, tview.NewTableCell(plot.TargetDir))
 	}
 	client.plotTable.ScrollToBeginning()
 

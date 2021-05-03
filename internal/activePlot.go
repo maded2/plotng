@@ -120,7 +120,6 @@ func (ap *ActivePlot) RunPlot() {
 		go ap.processLogs(stdout)
 	}
 	//log.Println(cmd.String())
-	ap.Pid = cmd.Process.Pid
 	if err := cmd.Run(); err != nil {
 		ap.State = PlotError
 		log.Printf("Plotting Exit with Error: %s", err)
