@@ -173,10 +173,12 @@ func (ap *ActivePlot) cleanup() {
 	if fileList, err := ioutil.ReadDir(ap.PlotDir); err == nil {
 		for _, file := range fileList {
 			if strings.Index(file.Name(), ap.Id) >= 0 && strings.HasSuffix(file.Name(), ".tmp") {
-				if err := os.Remove(file.Name()); err == nil {
-					log.Printf("File: %s deleted\n", file.Name())
+				fullPath := fmt.Sprintf("%s%c%s", ap.PlotDir, os.PathSeparator, file.Name())
+
+				if err := os.Remove(fullPath); err == nil {
+					log.Printf("File: %s deleted\n", fullPath)
 				} else {
-					log.Printf("Failed to delete file: %s\n", file.Name())
+					log.Printf("Failed to delete file: %s\n", fullPath)
 				}
 			}
 		}
