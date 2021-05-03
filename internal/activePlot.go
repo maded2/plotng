@@ -80,7 +80,7 @@ func (ap *ActivePlot) RunPlot() {
 		ap.EndTime = time.Now()
 	}()
 	args := []string{
-		"plots", "create", "-k32", "-n1", "-b6000", "-u128",
+		"plots", "create", "-k32", "-n1", "-u128",
 		"-t" + ap.PlotDir,
 		"-d" + ap.TargetDir,
 	}

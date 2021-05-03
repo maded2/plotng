@@ -23,6 +23,7 @@ type Config struct {
 	DiskSpaceCheck         bool
 	DelaysBetweenPlot      int
 	MaxActivePlotPerTarget int
+	MaxActivePlotPerTemp   int
 }
 
 type PlotConfig struct {

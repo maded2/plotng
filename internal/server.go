@@ -81,6 +81,9 @@ func (server *Server) createNewPlot(config *Config) {
 	if server.currentTemp >= len(config.TempDirectory) {
 		server.currentTemp = 0
 	}
+	if config.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= config.MaxActivePlotPerTemp {
+		return
+	}
 	targetDir := config.TargetDirectory[server.currentTarget]
 	server.currentTarget++
 
@@ -118,6 +121,15 @@ func (server *Server) createNewPlot(config *Config) {
 func (server *Server) countActiveTarget(path string) (count uint64) {
 	for _, plot := range server.active {
 		if plot.TargetDir == path {
+			count++
+		}
+	}
+	return
+}
+
+func (server *Server) countActiveTemp(path string) (count uint64) {
+	for _, plot := range server.active {
+		if plot.PlotDir == path {
 			count++
 		}
 	}
