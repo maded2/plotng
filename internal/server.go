@@ -76,6 +76,9 @@ func (server *Server) createNewPlot(config *Config) {
 		server.targetDelayStartTime = time.Now().Add(time.Duration(config.StaggeringDelay) * time.Minute)
 		return
 	}
+	if server.currentTemp >= len(config.TempDirectory) {
+		server.currentTemp = 0
+	}
 	plotDir := config.TempDirectory[server.currentTemp]
 	server.currentTemp++
 	if server.currentTemp >= len(config.TempDirectory) {
