@@ -211,7 +211,7 @@ func (client *Client) drawActivePlots() {
 	client.lastTable.SetCell(0, 5, tview.NewTableCell("Duration"))
 	client.lastTable.SetCell(0, 6, tview.NewTableCell("Plot Dir"))
 	client.lastTable.SetCell(0, 7, tview.NewTableCell("Dest Dir"))
-	client.lastTable.SetTitle(fmt.Sprintf(" Archied Plots [%d] ", len(client.msg.Archived)))
+	client.lastTable.SetTitle(fmt.Sprintf(" Archived Plots [%d] ", len(client.msg.Archived)))
 
 	for i, plot := range client.msg.Archived {
 		state := "Unknown"
