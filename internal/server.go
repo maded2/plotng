@@ -42,7 +42,9 @@ func (server *Server) ProcessLoop(configPath string, port int) {
 }
 
 func (server *Server) createPlot(t time.Time) {
-	server.config.ProcessConfig()
+	if server.config.ProcessConfig() {
+		server.targetDelayStartTime = time.Time{} // reset delay if new config was loaded
+	}
 	if server.config.CurrentConfig != nil {
 		server.config.Lock.RLock()
 		if len(server.active) < server.config.CurrentConfig.NumberOfParallelPlots {
@@ -68,6 +70,7 @@ func (server *Server) createNewPlot(config *Config) {
 		return
 	}
 	if time.Now().Before(server.targetDelayStartTime) {
+		log.Printf("Waiting until %s", server.targetDelayStartTime.Format("2006-01-02 15:04:05"))
 		return
 	}
 
@@ -85,12 +88,14 @@ func (server *Server) createNewPlot(config *Config) {
 		server.currentTemp = 0
 	}
 	if config.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= config.MaxActivePlotPerTemp {
+		log.Printf("Skipping [%s], too many active plots: %d", plotDir, int(server.countActiveTemp(plotDir)))
 		return
 	}
 	targetDir := config.TargetDirectory[server.currentTarget]
 	server.currentTarget++
 
 	if config.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= config.MaxActivePlotPerTarget {
+		log.Printf("Skipping [%s], too many active plots: %d", targetDir, int(server.countActiveTarget(targetDir)))
 		return
 	}
 

@@ -33,7 +33,7 @@ type PlotConfig struct {
 	Lock          sync.RWMutex
 }
 
-func (pc *PlotConfig) ProcessConfig() {
+func (pc *PlotConfig) ProcessConfig() bool {
 	if fs, err := os.Lstat(pc.ConfigPath); err != nil {
 		log.Printf("Failed to open config file [%s]: %s\n", pc.ConfigPath, err)
 	} else {
@@ -41,19 +41,21 @@ func (pc *PlotConfig) ProcessConfig() {
 			if f, err := os.Open(pc.ConfigPath); err != nil {
 				log.Printf("Failed to open config file [%s]: %s\n", pc.ConfigPath, err)
 			} else {
+				defer f.Close()
 				decoder := json.NewDecoder(f)
 				var newConfig Config
 				if err := decoder.Decode(&newConfig); err != nil {
-					log.Printf("Failed to process config file [%s]: %s\n", pc.ConfigPath, err)
+					log.Printf("Failed to process config file [%s], check your config file for mistake: %s\n", pc.ConfigPath, err)
 				} else {
 					pc.Lock.Lock()
 					pc.CurrentConfig = &newConfig
 					pc.Lock.Unlock()
 					log.Printf("New configuration loaded")
+					return true
 				}
-				f.Close()
 			}
 			pc.LastMod = fs.ModTime()
 		}
 	}
+	return false
 }
