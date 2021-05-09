@@ -59,6 +59,8 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
         "BucketSize": 0
     }
 
+Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
+
 ### Settings
 
 - Fingerprint : fingerprint passed to the chia command line tool (you can either use the fingerprint if the private has been installed on the plotter or use the following farmer/pool public key instead)
