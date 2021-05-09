@@ -80,4 +80,4 @@ Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 - UseTargetForTmp2 : use target directory for tmp2
 - BucketSize : specify custom busket size (default: 0 - use chia default)
 
-Please note PlotNG now skips any destination directory which have less than 105GB is space, if you set DiskSpaceCheck to true.
+Please note PlotNG now skips any destination directory which have less than 105GB of disk space, if you set DiskSpaceCheck to true.
