@@ -109,18 +109,20 @@ func (server *Server) createNewPlot(config *Config) {
 
 	t := time.Now()
 	plot := &ActivePlot{
-		PlotId:          t.Unix(),
-		TargetDir:       targetDir,
-		PlotDir:         plotDir,
-		Fingerprint:     config.Fingerprint,
-		FarmerPublicKey: config.FarmerPublicKey,
-		PoolPublicKey:   config.PoolPublicKey,
-		Threads:         config.Threads,
-		Buffers:         config.Buffers,
-		DisableBitField: config.DisableBitField,
-		Phase:           "NA",
-		Tail:            nil,
-		State:           PlotRunning,
+		PlotId:           t.Unix(),
+		TargetDir:        targetDir,
+		PlotDir:          plotDir,
+		Fingerprint:      config.Fingerprint,
+		FarmerPublicKey:  config.FarmerPublicKey,
+		PoolPublicKey:    config.PoolPublicKey,
+		Threads:          config.Threads,
+		Buffers:          config.Buffers,
+		DisableBitField:  config.DisableBitField,
+		UseTargetForTmp2: config.UseTargetForTmp2,
+		BucketSize:       config.BucketSize,
+		Phase:            "NA",
+		Tail:             nil,
+		State:            PlotRunning,
 	}
 	server.active[plot.PlotId] = plot
 	go plot.RunPlot()

@@ -54,7 +54,9 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
         "ShowPlotLog": false,
         "DiskSpaceCheck": false,
         "DelaysBetweenPlot": 0,
-        "MaxActivePlotPerTarget": 0
+        "MaxActivePlotPerTemp": 0,
+        "UseTargetForTmp2": false,
+        "BucketSize": 0
     }
 
 ### Settings
@@ -73,5 +75,7 @@ plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 
 - DiskSpaceCheck : check if destination directories have enough disk space to hold a new plot (only tested on Linux, may not work on MacOS / Windows)
 - DelaysBetweenPlot : Delays in mins between starting a new plot (minimum is 1 min)
 - MaxActivePlotPerTarget : Maximum active plots per target directory (default: 0 - no limit)
+- UseTargetForTmp2 : use target directory for tmp2
+- BucketSize : specify custom busket size (default: 0 - use chia default)
 
 Please note PlotNG now skips any destination directory which have less than 105GB is space, if you set DiskSpaceCheck to true.

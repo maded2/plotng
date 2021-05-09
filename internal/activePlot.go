@@ -37,16 +37,18 @@ type ActivePlot struct {
 	Buffers         int
 	DisableBitField bool
 
-	Phase      string
-	Tail       []string
-	State      int
-	lock       sync.RWMutex
-	Id         string
-	Progress   string
-	Phase1Time time.Time
-	Phase2Time time.Time
-	Phase3Time time.Time
-	Pid        int
+	Phase            string
+	Tail             []string
+	State            int
+	lock             sync.RWMutex
+	Id               string
+	Progress         string
+	Phase1Time       time.Time
+	Phase2Time       time.Time
+	Phase3Time       time.Time
+	Pid              int
+	UseTargetForTmp2 bool
+	BucketSize       int
 }
 
 func (ap *ActivePlot) Duration(currentTime time.Time) string {
@@ -80,7 +82,7 @@ func (ap *ActivePlot) RunPlot() {
 		ap.EndTime = time.Now()
 	}()
 	args := []string{
-		"plots", "create", "-k32", "-n1", "-u128",
+		"plots", "create", "-k32", "-n1",
 		"-t" + ap.PlotDir,
 		"-d" + ap.TargetDir,
 	}
@@ -101,6 +103,12 @@ func (ap *ActivePlot) RunPlot() {
 	}
 	if ap.DisableBitField {
 		args = append(args, "-e")
+	}
+	if ap.UseTargetForTmp2 {
+		args = append(args, "-2"+ap.TargetDir)
+	}
+	if ap.BucketSize > 0 {
+		args = append(args, fmt.Sprintf("-u%d", ap.BucketSize))
 	}
 
 	cmd := exec.Command("chia", args...)

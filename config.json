@@ -13,5 +13,7 @@
   "DelaysBetweenPlot": 0,
   "MaxActivePlotPerTarget": 0,
   "DisableBitField": false,
-  "MaxActivePlotPerTemp": 0
+  "MaxActivePlotPerTemp": 0,
+  "UseTargetForTmp2": false,
+  "BucketSize": 0
 }
