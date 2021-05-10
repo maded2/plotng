@@ -80,6 +80,9 @@ func (server *Server) createNewPlot(config *Config) {
 		server.targetDelayStartTime = time.Now().Add(time.Duration(config.StaggeringDelay) * time.Minute)
 		return
 	}
+	if server.currentTemp >= len(config.TempDirectory) {
+		server.currentTemp = 0
+	}
 	if config.MaxActivePlotPerPhase1 > 0 {
 		getPhase1 := func(plot *ActivePlot) bool {
 			if strings.HasPrefix(plot.Phase, "1/4") {
@@ -99,9 +102,6 @@ func (server *Server) createNewPlot(config *Config) {
 		if config.MaxActivePlotPerPhase1 <= sum {
 			return
 		}
-	}
-	if server.currentTemp >= len(config.TempDirectory) {
-		server.currentTemp = 0
 	}
 	plotDir := config.TempDirectory[server.currentTemp]
 	server.currentTemp++
