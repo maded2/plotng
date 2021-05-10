@@ -80,26 +80,6 @@ func (server *Server) createNewPlot(config *Config) {
 		server.targetDelayStartTime = time.Now().Add(time.Duration(config.StaggeringDelay) * time.Minute)
 		return
 	}
-	if server.currentTemp >= len(config.TempDirectory) {
-		server.currentTemp = 0
-	}
-	plotDir := config.TempDirectory[server.currentTemp]
-	server.currentTemp++
-	if server.currentTemp >= len(config.TempDirectory) {
-		server.currentTemp = 0
-	}
-	if config.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= config.MaxActivePlotPerTemp {
-		log.Printf("Skipping [%s], too many active plots: %d", plotDir, int(server.countActiveTemp(plotDir)))
-		return
-	}
-	targetDir := config.TargetDirectory[server.currentTarget]
-	server.currentTarget++
-
-	if config.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= config.MaxActivePlotPerTarget {
-		log.Printf("Skipping [%s], too many active plots: %d", targetDir, int(server.countActiveTarget(targetDir)))
-		return
-	}
-
 	if config.MaxActivePlotPerPhase1 > 0 {
 		getPhase1 := func(plot *ActivePlot) bool {
 			if strings.HasPrefix(plot.Phase, "1/4") {
@@ -119,6 +99,25 @@ func (server *Server) createNewPlot(config *Config) {
 		if config.MaxActivePlotPerPhase1 <= sum {
 			return
 		}
+	}
+	if server.currentTemp >= len(config.TempDirectory) {
+		server.currentTemp = 0
+	}
+	plotDir := config.TempDirectory[server.currentTemp]
+	server.currentTemp++
+	if server.currentTemp >= len(config.TempDirectory) {
+		server.currentTemp = 0
+	}
+	if config.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= config.MaxActivePlotPerTemp {
+		log.Printf("Skipping [%s], too many active plots: %d", plotDir, int(server.countActiveTemp(plotDir)))
+		return
+	}
+	targetDir := config.TargetDirectory[server.currentTarget]
+	server.currentTarget++
+
+	if config.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= config.MaxActivePlotPerTarget {
+		log.Printf("Skipping [%s], too many active plots: %d", targetDir, int(server.countActiveTarget(targetDir)))
+		return
 	}
 
 	server.targetDelayStartTime = time.Now().Add(time.Duration(config.DelaysBetweenPlot) * time.Minute)
