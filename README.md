@@ -77,6 +77,7 @@ Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 - DiskSpaceCheck : check if destination directories have enough disk space to hold a new plot (only tested on Linux, may not work on MacOS / Windows)
 - DelaysBetweenPlot : Delays in mins between starting a new plot (minimum is 1 min)
 - MaxActivePlotPerTarget : Maximum active plots per target directory (default: 0 - no limit)
+- MaxActivePlotPerPhase1 : Maximum active plots per Phase 1 (default: 0 - no limit)
 - UseTargetForTmp2 : use target directory for tmp2
 - BucketSize : specify custom busket size (default: 0 - use chia default)
 

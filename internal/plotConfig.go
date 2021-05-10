@@ -24,6 +24,7 @@ type Config struct {
 	DelaysBetweenPlot      int
 	MaxActivePlotPerTarget int
 	MaxActivePlotPerTemp   int
+	MaxActivePlotPerPhase1 int
 	UseTargetForTmp2       bool
 	BucketSize             int
 }
