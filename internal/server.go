@@ -7,6 +7,7 @@ import (
 	"github.com/ricochet2200/go-disk-usage/du"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -81,6 +82,26 @@ func (server *Server) createNewPlot(config *Config) {
 	}
 	if server.currentTemp >= len(config.TempDirectory) {
 		server.currentTemp = 0
+	}
+	if config.MaxActivePlotPerPhase1 > 0 {
+		getPhase1 := func(plot *ActivePlot) bool {
+			if strings.HasPrefix(plot.Phase, "1/4") {
+				return true
+			}
+			return false
+		}
+
+		var sum int
+
+		for _, plot := range server.active {
+			if getPhase1(plot) {
+				sum++
+			}
+		}
+
+		if config.MaxActivePlotPerPhase1 <= sum {
+			return
+		}
 	}
 	plotDir := config.TempDirectory[server.currentTemp]
 	server.currentTemp++
