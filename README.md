@@ -6,10 +6,13 @@ It will schedule new plots when a plot finishes as specified by the configuratio
 The server backend does a cycle every minute and check if the configuration file has been changed, if it detects that it has been changed then it reloads the configuration file.
 Once a valid configuration file has been loaded then it will start one new plot per cycle.
 
+**Donation: XCH**  `xch1wzvlj0ncv9uhjzcz43clkk0r84t6p2vp8k3yg762pglx6ufycmrsqnxj4v`
+
 ## Installation
 
 Please download the latest [release](../../releases) 
 Pre-built binaries available for 64-bits Linux, Windows and MacOS (I've only tested Linux version, although other users confirmed it is working on Windows and MacOS)
+
 
 ## Advance Installation from Source Code
 
