@@ -33,7 +33,11 @@ func (client *Client) ProcessLoop(host string, port int) {
 
 	client.setupUI()
 
-	go client.app.Run()
+	go client.processLoop()
+	client.app.Run()
+}
+
+func (client *Client) processLoop() {
 	client.checkServer()
 	ticker := time.NewTicker(30 * time.Second)
 	for range ticker.C {

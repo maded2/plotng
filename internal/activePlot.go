@@ -22,6 +22,7 @@ const (
 	PlotRunning = iota
 	PlotError
 	PlotFinished
+	PlotKilled
 )
 
 type ActivePlot struct {
@@ -49,6 +50,7 @@ type ActivePlot struct {
 	Pid              int
 	UseTargetForTmp2 bool
 	BucketSize       int
+	process          *os.Process
 }
 
 func (ap *ActivePlot) Duration(currentTime time.Time) string {
@@ -128,11 +130,24 @@ func (ap *ActivePlot) RunPlot() {
 		go ap.processLogs(stdout)
 	}
 	//log.Println(cmd.String())
-	if err := cmd.Run(); err != nil {
+
+	if err := cmd.Start(); err != nil {
+		log.Printf("Failed to start chia command: %s", err)
 		ap.State = PlotError
-		log.Printf("Plotting Exit with Error: %s", err)
-		ap.cleanup()
 		return
+	} else {
+		ap.process = cmd.Process
+		ap.Pid = cmd.Process.Pid
+		if err := cmd.Wait(); err != nil {
+			if ap.State != PlotKilled {
+				ap.State = PlotError
+				log.Printf("Plotting Exit with Error: %s", err)
+			} else {
+				log.Printf("Plot [%s] Killed", ap.Id)
+			}
+			ap.cleanup()
+			return
+		}
 	}
 	ap.State = PlotFinished
 	return

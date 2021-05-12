@@ -173,35 +173,45 @@ func (server *Server) getDiskSpaceAvailable(path string) uint64 {
 }
 
 func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	//log.Printf("New query: %s", req.URL.String())
+	log.Printf("New query: %s -  %s", req.Method, req.URL.String())
 	defer server.lock.RUnlock()
 	server.lock.RLock()
 
-	var msg Msg
-	msg.TargetDirs = map[string]uint64{}
-	msg.TempDirs = map[string]uint64{}
-	for _, v := range server.active {
-		msg.Actives = append(msg.Actives, v)
-	}
-	for _, v := range server.archive {
-		msg.Archived = append(msg.Archived, v)
-	}
-	if server.config.CurrentConfig != nil {
-		for _, dir := range server.config.CurrentConfig.TargetDirectory {
-			msg.TargetDirs[dir] = server.getDiskSpaceAvailable(dir)
+	switch req.Method {
+	case "GET":
+		var msg Msg
+		msg.TargetDirs = map[string]uint64{}
+		msg.TempDirs = map[string]uint64{}
+		for _, v := range server.active {
+			msg.Actives = append(msg.Actives, v)
 		}
-		for _, dir := range server.config.CurrentConfig.TempDirectory {
-			msg.TempDirs[dir] = server.getDiskSpaceAvailable(dir)
+		for _, v := range server.archive {
+			msg.Archived = append(msg.Archived, v)
 		}
-	}
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(msg); err == nil {
-		resp.WriteHeader(http.StatusOK)
-		resp.Write(buf.Bytes())
-	} else {
-		resp.WriteHeader(http.StatusInternalServerError)
-		log.Printf("Failed to encode message: %s", err)
+		if server.config.CurrentConfig != nil {
+			for _, dir := range server.config.CurrentConfig.TargetDirectory {
+				msg.TargetDirs[dir] = server.getDiskSpaceAvailable(dir)
+			}
+			for _, dir := range server.config.CurrentConfig.TempDirectory {
+				msg.TempDirs[dir] = server.getDiskSpaceAvailable(dir)
+			}
+		}
+		var buf bytes.Buffer
+		enc := gob.NewEncoder(&buf)
+		if err := enc.Encode(msg); err == nil {
+			resp.WriteHeader(http.StatusOK)
+			resp.Write(buf.Bytes())
+		} else {
+			resp.WriteHeader(http.StatusInternalServerError)
+			log.Printf("Failed to encode message: %s", err)
+		}
+	case "DELETE":
+		for _, v := range server.active {
+			if v.Id == req.RequestURI {
+				v.process.Kill()
+				v.State = PlotKilled
+			}
+		}
 	}
 }
 
