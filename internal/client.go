@@ -196,6 +196,13 @@ func (client *Client) setupUI() {
 	client.app.EnableMouse(true)
 }
 
+func (client *Client) shortenPlotId(id string) string {
+	if len(id) < 20 {
+		return ""
+	}
+	return fmt.Sprintf("%s...%s", id[:10], id[len(id)-10:])
+}
+
 func (client *Client) drawActivePlots() {
 	client.plotTable.Clear()
 	client.plotTable.SetCell(0, 0, tview.NewTableCell("Host"))
@@ -228,7 +235,7 @@ func (client *Client) drawActivePlots() {
 			}
 
 			client.plotTable.SetCell(count+1, 0, tview.NewTableCell(host))
-			client.plotTable.SetCell(count+1, 1, tview.NewTableCell(plot.Id))
+			client.plotTable.SetCell(count+1, 1, tview.NewTableCell(client.shortenPlotId(plot.Id)))
 			client.plotTable.SetCell(count+1, 2, tview.NewTableCell(state))
 			client.plotTable.SetCell(count+1, 3, tview.NewTableCell(plot.Phase).SetAlign(tview.AlignRight))
 			client.plotTable.SetCell(count+1, 4, tview.NewTableCell(plot.Progress).SetAlign(tview.AlignRight))
@@ -275,7 +282,7 @@ func (client *Client) drawArchivedPlots() {
 			}
 
 			client.lastTable.SetCell(count+1, 0, tview.NewTableCell(host))
-			client.lastTable.SetCell(count+1, 1, tview.NewTableCell(plot.Id))
+			client.lastTable.SetCell(count+1, 1, tview.NewTableCell(client.shortenPlotId(plot.Id)))
 			client.lastTable.SetCell(count+1, 2, tview.NewTableCell(state))
 			client.lastTable.SetCell(count+1, 3, tview.NewTableCell(plot.Phase))
 			client.lastTable.SetCell(count+1, 4, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
