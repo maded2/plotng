@@ -18,7 +18,7 @@ func main() {
 	}
 	if *ui {
 		client := &internal.Client{}
-		client.ProcessLoop(*host, *port)
+		client.ProcessLoop(*host)
 	} else {
 		server := &internal.Server{}
 		server.ProcessLoop(*configFile, *port)

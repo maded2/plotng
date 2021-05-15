@@ -38,7 +38,9 @@ The UI can run on any host and point back to the server using the host and port 
 
 
 `
-plotng -ui -host <plotter host name or IP> -port <plotter port number, default: 8484>
+plotng -ui -host <comma separated list of plotters host name or IP with/without port number>
+
+eg. plotng -ui -host plotter1:8484,plotter2,plotter3:8485
 `
 
 ## Configuration File (JSON format)
