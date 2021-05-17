@@ -307,7 +307,7 @@ func (client *Client) selectActivePlot(row int, column int) {
 			s += line
 		}
 	}
-	client.logTextbox.SetText(s)
+	client.logTextbox.SetText(strings.TrimSpace(s))
 }
 
 func (client *Client) selectArchivedPlot(row int, column int) {
@@ -317,7 +317,7 @@ func (client *Client) selectArchivedPlot(row int, column int) {
 			s += line
 		}
 	}
-	client.logTextbox.SetText(s)
+	client.logTextbox.SetText(strings.TrimSpace(s))
 }
 
 func (client *Client) computeAvgTargetTime(host, path string) string {
