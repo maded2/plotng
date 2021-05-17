@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"runtime"
 )
 
 type Client struct {
@@ -177,9 +176,8 @@ func (client *Client) setupUI() {
 
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
-	if runtime.GOOS == "windows" {
-	  client.logTextbox.SetScrollable(false) //mouse click and scroll not available so show only last messages
-    }
+
+	client.logTextbox.ScrollToEnd()
 
 	client.app = tview.NewApplication()
 
