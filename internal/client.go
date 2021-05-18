@@ -194,6 +194,8 @@ func (client *Client) setupUI() {
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
 
+	client.logTextbox.ScrollToEnd()
+
 	client.app = tview.NewApplication()
 
 	dirPanel := tview.NewFlex()
@@ -322,7 +324,7 @@ func (client *Client) selectActivePlot(row int, column int) {
 			s += line
 		}
 	}
-	client.logTextbox.SetText(s)
+	client.logTextbox.SetText(strings.TrimSpace(s))
 }
 
 func (client *Client) selectArchivedPlot(row int, column int) {
@@ -332,7 +334,7 @@ func (client *Client) selectArchivedPlot(row int, column int) {
 			s += line
 		}
 	}
-	client.logTextbox.SetText(s)
+	client.logTextbox.SetText(strings.TrimSpace(s))
 }
 
 func (client *Client) computeAvgTargetTime(host, path string) string {
