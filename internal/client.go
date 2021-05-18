@@ -10,11 +10,13 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+
+	"plotng/internal/widget"
 )
 
 type Client struct {
 	app                 *tview.Application
-	plotTable           *tview.Table
+	activePlotsTable    *widget.SortedTable
 	targetTable         *tview.Table
 	tmpTable            *tview.Table
 	lastTable           *tview.Table
@@ -22,8 +24,9 @@ type Client struct {
 	hosts               []string
 	msg                 map[string]*Msg
 	archivedTableActive bool
-	activeLogs          map[int][]string
+	activeLogs          map[string][]string
 	archivedLogs        map[int][]string
+	logPlotId           string
 }
 
 var httpClient = &http.Client{
@@ -31,6 +34,7 @@ var httpClient = &http.Client{
 }
 
 func (client *Client) ProcessLoop(hostList string) {
+	client.activeLogs = make(map[string][]string)
 	for _, host := range strings.Split(hostList, ",") {
 		host = strings.TrimSpace(host)
 		if strings.Index(host, ":") < 0 {
@@ -75,9 +79,6 @@ func (client *Client) getServerData(host string) (*Msg, error) {
 		decoder := gob.NewDecoder(resp.Body)
 		if err := decoder.Decode(&msg); err == nil {
 			msg := &msg
-			sort.Slice(msg.Actives, func(i, j int) bool {
-				return msg.Actives[i].PlotId < msg.Actives[j].PlotId
-			})
 			sort.Slice(msg.Archived, func(i, j int) bool {
 				return msg.Archived[i].PlotId > msg.Archived[j].PlotId
 			})
@@ -105,6 +106,10 @@ func (client *Client) checkServer(host string) {
 		client.drawTargetTable()
 		client.drawActivePlots()
 		client.drawArchivedPlots()
+		if log, ok := client.activeLogs[client.logPlotId]; ok {
+			client.logTextbox.SetText(strings.Join(log, ""))
+			client.logTextbox.ScrollToEnd()
+		}
 	})
 }
 
@@ -173,10 +178,16 @@ func (client *Client) drawTargetTable() {
 
 func (client *Client) setupUI() {
 	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
-	client.plotTable = tview.NewTable()
-	client.plotTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Active Plots")
-	client.plotTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
-	client.plotTable.SetSelectionChangedFunc(client.selectActivePlot).SetFixed(1, 6)
+	client.activePlotsTable = widget.NewSortedTable()
+	client.activePlotsTable.SetSelectable(true)
+	client.activePlotsTable.SetBorder(true)
+	client.activePlotsTable.SetTitleAlign(tview.AlignLeft)
+	client.activePlotsTable.SetTitle(" Active Plots ")
+	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.activePlotsTable.SetSelectionChangedFunc(client.selectActivePlot)
+	client.activePlotsTable.SetHeaders(activePlotsHeaders...)
+	client.activePlotsTable.SetColumnAlign(3, tview.AlignRight)
+	client.activePlotsTable.SetColumnAlign(4, tview.AlignRight)
 
 	client.tmpTable = tview.NewTable()
 	client.tmpTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Plot Directories")
@@ -203,7 +214,7 @@ func (client *Client) setupUI() {
 
 	mainPanel := tview.NewFlex()
 	mainPanel.SetDirection(tview.FlexRow)
-	mainPanel.AddItem(client.plotTable, 0, 1, true)
+	mainPanel.AddItem(client.activePlotsTable, 0, 1, true)
 	mainPanel.AddItem(dirPanel, 0, 1, false)
 	mainPanel.AddItem(client.lastTable, 0, 1, false)
 	mainPanel.AddItem(client.logTextbox, 0, 1, false)
@@ -213,60 +224,112 @@ func (client *Client) setupUI() {
 	client.app.EnableMouse(true)
 }
 
-func (client *Client) shortenPlotId(id string) string {
+func shortenPlotId(id string) string {
 	if len(id) < 20 {
 		return ""
 	}
 	return fmt.Sprintf("%s...%s", id[:10], id[len(id)-10:])
 }
 
+// Active plots
+
+type activePlotsData struct {
+	host      string
+	plotId    string
+	status    int
+	phase     int
+	progress  int
+	startTime time.Time
+	plotDir   string
+	destDir   string
+}
+
+var activePlotsHeaders = []string{
+	"Host",
+	"Plot ID",
+	"Status",
+	"Phase",
+	"Progress",
+	"Start Time",
+	"Duration",
+	"Plot Dir",
+	"Dest Dir",
+}
+
+func (apd *activePlotsData) Strings() []string {
+	status := "Unknown"
+	switch apd.status {
+	case PlotRunning:
+		status = "Running"
+	case PlotError:
+		status = "Errored"
+	case PlotFinished:
+		status = "Finished"
+	}
+	return []string{
+		apd.host,
+		shortenPlotId(apd.plotId),
+		status,
+		fmt.Sprintf("%d/4", apd.phase),
+		fmt.Sprintf("%d%%", apd.progress),
+		apd.startTime.Format("2006-01-02 15:04:05"),
+		DurationString(time.Now().Sub(apd.startTime)),
+		apd.plotDir,
+		apd.destDir,
+	}
+}
+
+func (apd *activePlotsData) LessThan(Other widget.SortableRow, column int) bool {
+	other := Other.(*activePlotsData)
+	switch column {
+	case 0:
+		return apd.host < other.host
+	case 1:
+		return apd.plotId < other.plotId
+	case 2:
+		return apd.status < other.status
+	case 3:
+		return apd.phase < other.phase
+	case 4:
+		return apd.progress < other.progress
+	case 5, 6:
+		return apd.startTime.Before(other.startTime)
+	case 7:
+		return apd.plotDir < other.plotDir
+	case 8:
+		return apd.destDir < other.destDir
+	default:
+		panic("unknown column")
+	}
+}
+
+func (client *Client) makeActivePlotsData(host string, p *ActivePlot) *activePlotsData {
+	apd := &activePlotsData{}
+	apd.host = host
+	apd.plotId = p.Id
+	apd.status = p.State
+	apd.phase = p.getCurrentPhase()
+	apd.progress = p.getProgress()
+	apd.startTime = p.getPhaseTime(0)
+	apd.plotDir = p.PlotDir
+	apd.destDir = p.TargetDir
+	return apd
+}
+
 func (client *Client) drawActivePlots() {
-	client.plotTable.Clear()
-	client.plotTable.SetCell(0, 0, tview.NewTableCell("Host"))
-	client.plotTable.SetCell(0, 1, tview.NewTableCell("Plot Id"))
-	client.plotTable.SetCell(0, 2, tview.NewTableCell("Status"))
-	client.plotTable.SetCell(0, 3, tview.NewTableCell("Phase"))
-	client.plotTable.SetCell(0, 4, tview.NewTableCell("Progress"))
-	client.plotTable.SetCell(0, 5, tview.NewTableCell("Start Time"))
-	client.plotTable.SetCell(0, 6, tview.NewTableCell("Duration"))
-	client.plotTable.SetCell(0, 7, tview.NewTableCell("Plot Dir"))
-	client.plotTable.SetCell(0, 8, tview.NewTableCell("Dest Dir"))
-
-	t := time.Now()
-	count := 0
-	client.activeLogs = map[int][]string{}
-	for _, host := range client.hosts {
-		msg, found := client.msg[host]
-		if !found {
-			continue
-		}
+	activePlotsCount := 0
+	client.activePlotsTable.Clear()
+	for host, msg := range client.msg {
 		for _, plot := range msg.Actives {
-			state := "Unknown"
-			switch plot.State {
-			case PlotRunning:
-				state = "Running"
-			case PlotError:
-				state = "Errored"
-			case PlotFinished:
-				state = "Finished"
-			}
-
-			client.plotTable.SetCell(count+1, 0, tview.NewTableCell(host))
-			client.plotTable.SetCell(count+1, 1, tview.NewTableCell(client.shortenPlotId(plot.Id)))
-			client.plotTable.SetCell(count+1, 2, tview.NewTableCell(state))
-			client.plotTable.SetCell(count+1, 3, tview.NewTableCell(plot.Phase).SetAlign(tview.AlignRight))
-			client.plotTable.SetCell(count+1, 4, tview.NewTableCell(plot.Progress).SetAlign(tview.AlignRight))
-			client.plotTable.SetCell(count+1, 5, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-			client.plotTable.SetCell(count+1, 6, tview.NewTableCell(plot.Duration(t)))
-			client.plotTable.SetCell(count+1, 7, tview.NewTableCell(plot.PlotDir))
-			client.plotTable.SetCell(count+1, 8, tview.NewTableCell(plot.TargetDir))
-			client.activeLogs[count+1] = plot.Tail
-			count++
+			client.activeLogs[plot.Id] = plot.Tail
+			client.activePlotsTable.SetRowData(plot.Id, client.makeActivePlotsData(host, plot))
+			activePlotsCount++
 		}
 	}
-	client.plotTable.SetTitle(fmt.Sprintf(" Active Plots [%d] ", count))
-	client.plotTable.ScrollToBeginning()
+	client.activePlotsTable.SetTitle(fmt.Sprintf(" Active Plots [%d] ", activePlotsCount))
 }
+
+////////////////////////////////////////////
 
 func (client *Client) drawArchivedPlots() {
 	client.lastTable.Clear()
@@ -299,7 +362,7 @@ func (client *Client) drawArchivedPlots() {
 			}
 
 			client.lastTable.SetCell(count+1, 0, tview.NewTableCell(host))
-			client.lastTable.SetCell(count+1, 1, tview.NewTableCell(client.shortenPlotId(plot.Id)))
+			client.lastTable.SetCell(count+1, 1, tview.NewTableCell(shortenPlotId(plot.Id)))
 			client.lastTable.SetCell(count+1, 2, tview.NewTableCell(state))
 			client.lastTable.SetCell(count+1, 3, tview.NewTableCell(plot.Phase))
 			client.lastTable.SetCell(count+1, 4, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
@@ -315,18 +378,24 @@ func (client *Client) drawArchivedPlots() {
 	client.lastTable.ScrollToBeginning()
 }
 
-func (client *Client) selectActivePlot(row int, column int) {
-	s := ""
-	if log, found := client.activeLogs[row]; found {
-		for _, line := range log {
-			s += line
-		}
+func (client *Client) selectActivePlot(key string) {
+	client.logPlotId = key
+	client.lastTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
+	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
+	if log, found := client.activeLogs[key]; found {
+		client.logTextbox.SetText(strings.Join(log, ""))
+		client.logTextbox.ScrollToEnd()
+
+	} else {
+		client.logTextbox.SetText("")
 	}
-	client.logTextbox.SetText(s)
 }
 
 func (client *Client) selectArchivedPlot(row int, column int) {
 	s := ""
+
+	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
+	client.lastTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
 	if log, found := client.archivedLogs[row]; found {
 		for _, line := range log {
 			s += line
