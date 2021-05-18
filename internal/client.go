@@ -3,12 +3,13 @@ package internal
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 type Client struct {
@@ -23,6 +24,10 @@ type Client struct {
 	archivedTableActive bool
 	activeLogs          map[int][]string
 	archivedLogs        map[int][]string
+}
+
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second, // This covers the entire request
 }
 
 func (client *Client) ProcessLoop(hostList string) {
@@ -58,13 +63,13 @@ func (client *Client) checkServers() {
 	}
 }
 
-func (client *Client) checkServer(host string) {
-	c := &http.Client{}
+func (client *Client) getServerData(host string) (*Msg, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/", host), nil)
 	if err != nil {
-		client.logTextbox.SetText(err.Error())
+		return nil, err
 	}
-	if resp, err := c.Do(req); err == nil {
+
+	if resp, err := httpClient.Do(req); err == nil {
 		defer resp.Body.Close()
 		var msg Msg
 		decoder := gob.NewDecoder(resp.Body)
@@ -76,19 +81,31 @@ func (client *Client) checkServer(host string) {
 			sort.Slice(msg.Archived, func(i, j int) bool {
 				return msg.Archived[i].PlotId > msg.Archived[j].PlotId
 			})
-			client.msg[host] = msg
+			return msg, nil
 		} else {
-			client.logTextbox.SetText(fmt.Sprintf("Failed to decode msg: %s", err))
+			return nil, fmt.Errorf("Failed to decode message: %w", err)
 		}
 	} else {
-		client.logTextbox.SetText(err.Error())
+		return nil, err
 	}
+}
 
-	client.drawTempTable()
-	client.drawTargetTable()
-	client.drawActivePlots()
-	client.drawArchivedPlots()
-	client.app.Draw()
+func (client *Client) checkServer(host string) {
+	// Retrieve data on the goroutine thread
+	msg, err := client.getServerData(host)
+
+	// Modify UI state on the tview thread.
+	client.app.QueueUpdateDraw(func() {
+		if err != nil {
+			client.logTextbox.SetText(err.Error())
+			return
+		}
+		client.msg[host] = msg
+		client.drawTempTable()
+		client.drawTargetTable()
+		client.drawActivePlots()
+		client.drawArchivedPlots()
+	})
 }
 
 func (client *Client) drawTempTable() {
