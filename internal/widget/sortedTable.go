@@ -161,9 +161,9 @@ func (st *SortedTable) Keys() []string {
 
 func (st *SortedTable) SetRowData(key string, data SortableRow) *SortedTable {
 	found := false
-	for _, dr := range st.values {
+	for idx, dr := range st.values {
 		if dr.key == key {
-			dr.data = data
+			st.values[idx].data = data
 			found = true
 			break
 		}
