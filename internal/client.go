@@ -318,14 +318,25 @@ func (client *Client) makeActivePlotsData(host string, p *ActivePlot) *activePlo
 
 func (client *Client) drawActivePlots() {
 	activePlotsCount := 0
-	client.activePlotsTable.Clear()
+
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.activePlotsTable.Keys() {
+		keysToRemove[key] = struct{}{}
+	}
+
 	for host, msg := range client.msg {
 		for _, plot := range msg.Actives {
+			delete(keysToRemove, plot.Id)
 			client.activeLogs[plot.Id] = plot.Tail
 			client.activePlotsTable.SetRowData(plot.Id, client.makeActivePlotsData(host, plot))
 			activePlotsCount++
 		}
 	}
+
+	for key, _ := range keysToRemove {
+		client.activePlotsTable.ClearRowData(key)
+	}
+
 	client.activePlotsTable.SetTitle(fmt.Sprintf(" Active Plots [%d] ", activePlotsCount))
 }
 

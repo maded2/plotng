@@ -151,6 +151,14 @@ func (st *SortedTable) Clear() *SortedTable {
 	return st
 }
 
+func (st *SortedTable) Keys() []string {
+	keys := make([]string, 0, len(st.values))
+	for _, row := range st.values {
+		keys = append(keys, row.key)
+	}
+	return keys
+}
+
 func (st *SortedTable) SetRowData(key string, data SortableRow) *SortedTable {
 	found := false
 	for _, dr := range st.values {
