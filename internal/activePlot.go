@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -50,6 +51,7 @@ type ActivePlot struct {
 	Pid              int
 	UseTargetForTmp2 bool
 	BucketSize       int
+	SavePlotLogs     bool
 	process          *os.Process
 }
 
@@ -155,6 +157,7 @@ func (ap *ActivePlot) RunPlot() {
 
 func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 	reader := bufio.NewReader(in)
+	var f *os.File
 	for {
 		if s, err := reader.ReadString('\n'); err != nil {
 			break
@@ -172,6 +175,20 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 			}
 			if strings.HasPrefix(s, "ID: ") {
 				ap.Id = strings.TrimSuffix(s[4:], "\n")
+				if ap.SavePlotLogs {
+					userHomeDir, err := os.UserHomeDir()
+					if err != nil {
+						break
+					}
+					fpath := filepath.Join(userHomeDir, ".chia", "mainnet", "plotter", fmt.Sprintf("plotng_log_%s.txt", ap.Id))
+					f, err = os.Create(fpath)
+					if err != nil {
+						break
+					}
+					for _, l := range ap.Tail {
+						f.Write([]byte(l))
+					}
+				}
 			}
 			for phaseStr, progress := range progressTable {
 				if strings.Index(s, phaseStr) >= 0 {
@@ -180,6 +197,9 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 				}
 			}
 			ap.lock.Lock()
+			if f != nil {
+				f.Write([]byte(s))
+			}
 			ap.Tail = append(ap.Tail, s)
 			if len(ap.Tail) > 20 {
 				ap.Tail = ap.Tail[len(ap.Tail)-20:]

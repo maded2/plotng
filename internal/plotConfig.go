@@ -27,6 +27,7 @@ type Config struct {
 	MaxActivePlotPerPhase1 int
 	UseTargetForTmp2       bool
 	BucketSize             int
+	SavePlotLogs           bool
 }
 
 type PlotConfig struct {
