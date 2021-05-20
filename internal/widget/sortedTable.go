@@ -214,7 +214,25 @@ func (st *SortedTable) redrawHeaders() {
 	}
 }
 
+func (st *SortedTable) GetSelection() string {
+	if st.curRow > 0 {
+		return st.values[st.curRow-1].key
+	}
+	return ""
+}
+
+func (st *SortedTable) Select(key string) *SortedTable {
+	for row, value := range st.values {
+		if value.key == key {
+			st.table.Select(row+1, 0)
+			break
+		}
+	}
+	return st
+}
+
 func (st *SortedTable) sortData() {
+	selectedKey := st.GetSelection()
 	sort.SliceStable(st.values, func(row1, row2 int) bool {
 		row1Value := st.values[row1].data
 		row2Value := st.values[row2].data
@@ -226,6 +244,7 @@ func (st *SortedTable) sortData() {
 			return row1Value.LessThan(row2Value, st.sortColumn) != st.sortReverse
 		}
 	})
+	st.Select(selectedKey)
 }
 
 func (st *SortedTable) SetColumnAlign(col int, align int) *SortedTable {
