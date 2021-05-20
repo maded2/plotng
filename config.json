@@ -17,5 +17,5 @@
   "MaxActivePlotPerPhase1": 0,
   "UseTargetForTmp2": false,
   "BucketSize": 0,
-  "SavePlotLogs": true
+  "SavePlotLogDir": ""
 }

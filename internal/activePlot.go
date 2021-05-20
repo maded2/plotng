@@ -51,7 +51,7 @@ type ActivePlot struct {
 	Pid              int
 	UseTargetForTmp2 bool
 	BucketSize       int
-	SavePlotLogs     bool
+	SavePlotLogDir   string
 	process          *os.Process
 }
 
@@ -175,12 +175,8 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 			}
 			if strings.HasPrefix(s, "ID: ") {
 				ap.Id = strings.TrimSuffix(s[4:], "\n")
-				if ap.SavePlotLogs {
-					userHomeDir, err := os.UserHomeDir()
-					if err != nil {
-						break
-					}
-					logFilePath := filepath.Join(userHomeDir, ".chia", "mainnet", "plotter", fmt.Sprintf("plotng_log_%s.txt", ap.Id))
+				if len(ap.SavePlotLogDir) > 0 {
+					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
 					logFile, err = os.Create(logFilePath)
 					if err != nil {
 						break

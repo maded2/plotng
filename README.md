@@ -62,7 +62,7 @@ eg. plotng -ui -host plotter1:8484,plotter2,plotter3:8485
         "MaxActivePlotPerTemp": 0,
         "UseTargetForTmp2": false,
         "BucketSize": 0,
-        "SavePlotLogs": false
+        "SavePlotLogDir": ""
     }
 
 Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
@@ -86,6 +86,6 @@ Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 - MaxActivePlotPerPhase1 : Maximum active plots per Phase 1 (default: 0 - no limit)
 - UseTargetForTmp2 : use target directory for tmp2
 - BucketSize : specify custom busket size (default: 0 - use chia default)
-- SavePlotLogs : saves logs to `.chia/mainnet/plotter/plotng_log_PLOTID.txt` (default: false)
+- SavePlotLogDir : saves plotting logs to this directory. logs are not saved if no directory is provided (default: "")
 
 Please note PlotNG now skips any destination directory which have less than 105GB of disk space, if you set DiskSpaceCheck to true.
