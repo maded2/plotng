@@ -141,6 +141,7 @@ func (server *Server) createNewPlot(config *Config) {
 		DisableBitField:  config.DisableBitField,
 		UseTargetForTmp2: config.UseTargetForTmp2,
 		BucketSize:       config.BucketSize,
+		SavePlotLogDir:   config.SavePlotLogDir,
 		Phase:            "NA",
 		Tail:             nil,
 		State:            PlotRunning,
