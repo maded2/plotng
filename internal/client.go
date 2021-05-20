@@ -94,6 +94,7 @@ func (client *Client) checkServer(host string) {
 	// Modify UI state on the tview thread.
 	client.app.QueueUpdateDraw(func() {
 		if err != nil {
+			client.logTextbox.SetText("Log (error) ")
 			client.logTextbox.SetText(err.Error())
 			return
 		}
@@ -102,10 +103,13 @@ func (client *Client) checkServer(host string) {
 		client.drawTempTable()
 		client.drawTargetTable()
 		client.drawArchivedPlotsTable()
-		if log, ok := client.activeLogs[client.logPlotId]; ok {
-			client.logTextbox.SetText(strings.Join(log, ""))
-			client.logTextbox.ScrollToEnd()
-		} else if log, ok = client.archivedLogs[client.logPlotId]; ok {
+
+		log, ok := client.activeLogs[client.logPlotId]
+		if !ok {
+			log, ok = client.archivedLogs[client.logPlotId]
+		}
+		if ok {
+			client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
 			client.logTextbox.SetText(strings.Join(log, ""))
 			client.logTextbox.ScrollToEnd()
 		}
@@ -207,7 +211,7 @@ func (client *Client) setupUI() {
 	client.archivedPlotsTable.SetColumnAlign(3, tview.AlignRight)
 
 	client.logTextbox = tview.NewTextView()
-	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
+	client.logTextbox.SetBorder(true).SetTitle(" Log ").SetTitleAlign(tview.AlignLeft)
 
 	client.logTextbox.ScrollToEnd()
 
@@ -351,6 +355,7 @@ func (client *Client) selectActivePlot(key string) {
 	client.logPlotId = key
 	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
 	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
+	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
 	if log, found := client.activeLogs[key]; found {
 		client.logTextbox.SetText(strings.Join(log, ""))
 		client.logTextbox.ScrollToEnd()
@@ -396,7 +401,7 @@ func (apd *archivedPlotData) Strings() []string {
 	}
 	return []string{
 		apd.host,
-		apd.plotId,
+		shortenPlotId(apd.plotId),
 		status,
 		fmt.Sprintf("%d/4", apd.phase),
 		apd.startTime.Format("2006-01-02 15:04:05"),
@@ -475,6 +480,7 @@ func (client *Client) selectArchivedPlot(key string) {
 	client.logPlotId = key
 	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
 	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
+	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
 	if log, found := client.archivedLogs[key]; found {
 		client.logTextbox.SetText(strings.Join(log, ""))
 		client.logTextbox.ScrollToEnd()
