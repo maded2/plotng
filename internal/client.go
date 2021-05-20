@@ -34,7 +34,6 @@ var httpClient = &http.Client{
 }
 
 func (client *Client) ProcessLoop(hostList string) {
-	client.activeLogs = make(map[string][]string)
 	for _, host := range strings.Split(hostList, ",") {
 		host = strings.TrimSpace(host)
 		if strings.Index(host, ":") < 0 {
@@ -62,6 +61,7 @@ func (client *Client) processLoop() {
 }
 
 func (client *Client) checkServers() {
+	client.activeLogs = make(map[string][]string)
 	for _, host := range client.hosts {
 		client.checkServer(host)
 	}
@@ -204,6 +204,8 @@ func (client *Client) setupUI() {
 
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
+
+	client.logTextbox.ScrollToEnd()
 
 	client.app = tview.NewApplication()
 
@@ -405,6 +407,7 @@ func (client *Client) selectActivePlot(key string) {
 func (client *Client) selectArchivedPlot(row int, column int) {
 	s := ""
 
+	client.logPlotId = ""
 	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
 	client.lastTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
 	if log, found := client.archivedLogs[row]; found {
@@ -412,7 +415,7 @@ func (client *Client) selectArchivedPlot(row int, column int) {
 			s += line
 		}
 	}
-	client.logTextbox.SetText(s)
+	client.logTextbox.SetText(strings.TrimSpace(s))
 }
 
 func (client *Client) computeAvgTargetTime(host, path string) string {
