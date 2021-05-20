@@ -157,7 +157,7 @@ func (ap *ActivePlot) RunPlot() {
 
 func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 	reader := bufio.NewReader(in)
-	var f *os.File
+	var logFile *os.File
 	for {
 		if s, err := reader.ReadString('\n'); err != nil {
 			break
@@ -180,13 +180,13 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 					if err != nil {
 						break
 					}
-					fpath := filepath.Join(userHomeDir, ".chia", "mainnet", "plotter", fmt.Sprintf("plotng_log_%s.txt", ap.Id))
-					f, err = os.Create(fpath)
+					logFilePath := filepath.Join(userHomeDir, ".chia", "mainnet", "plotter", fmt.Sprintf("plotng_log_%s.txt", ap.Id))
+					logFile, err = os.Create(logFilePath)
 					if err != nil {
 						break
 					}
 					for _, l := range ap.Tail {
-						f.Write([]byte(l))
+						logFile.Write([]byte(l))
 					}
 				}
 			}
@@ -197,8 +197,8 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 				}
 			}
 			ap.lock.Lock()
-			if f != nil {
-				f.Write([]byte(s))
+			if logFile != nil {
+				logFile.Write([]byte(s))
 			}
 			ap.Tail = append(ap.Tail, s)
 			if len(ap.Tail) > 20 {
