@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -53,6 +54,52 @@ type ActivePlot struct {
 	BucketSize       int
 	SavePlotLogDir   string
 	process          *os.Process
+}
+
+// getPhaseTime returns the end time of a phase. phase 0 is the start time
+// of the entire plot, and phase 4 is the end time of the entire plot.
+// TODO: We can change the ActivePlot structure to be PhaseTime [5]time.Time,
+//       but that's a protocol change.
+func (ap *ActivePlot) getPhaseTime(phase int) time.Time {
+	switch phase {
+	case 0:
+		return ap.StartTime
+	case 1:
+		return ap.Phase1Time
+	case 2:
+		return ap.Phase2Time
+	case 3:
+		return ap.Phase3Time
+	case 4:
+		return ap.EndTime
+	default:
+		panic("request for invalid phase time")
+	}
+}
+
+// getCurrentPhase returns the current phase, or a negative number to indicate an error.
+// TODO: We can also change this to be part of the structure, but that's also a protocol change.
+func (ap *ActivePlot) getCurrentPhase() int {
+	parts := strings.Split(ap.Phase, "/")
+	if len(parts) != 2 {
+		return -1
+	} else if i, err := strconv.Atoi(parts[0]); err != nil {
+		return -2
+	} else {
+		return i
+	}
+}
+
+// getProgress returns the current progress, or a negative number to indicate an error
+// TODO: We can also change this to be part of the structure, but that's also a protocol change.
+func (ap *ActivePlot) getProgress() int {
+	if len(ap.Progress) == 0 {
+		return -1
+	} else if i, err := strconv.Atoi(ap.Progress[:len(ap.Progress)-1]); err != nil {
+		return -2
+	} else {
+		return i
+	}
 }
 
 func (ap *ActivePlot) Duration(currentTime time.Time) string {
