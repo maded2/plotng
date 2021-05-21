@@ -23,6 +23,7 @@ type SortedTable struct {
 	table       *tview.Table
 	values      []tableRow
 	curRow      int
+	curKey      string
 	sortColumn  int
 	sortReverse bool
 
@@ -120,8 +121,11 @@ func (st *SortedTable) selectionChanged(row, column int) {
 		}
 	} else {
 		st.curRow = row
-		if st.selectionChangedFunc != nil {
-			st.selectionChangedFunc(st.values[row-1].key)
+		if st.curKey != st.values[row-1].key {
+			st.curKey = st.values[row-1].key
+			if st.selectionChangedFunc != nil {
+				st.selectionChangedFunc(st.curKey)
+			}
 		}
 	}
 }
@@ -214,6 +218,23 @@ func (st *SortedTable) redrawHeaders() {
 	}
 }
 
+func (st *SortedTable) GetSelection() string {
+	if st.curRow > 0 {
+		return st.values[st.curRow-1].key
+	}
+	return ""
+}
+
+func (st *SortedTable) Select(key string) *SortedTable {
+	for row, value := range st.values {
+		if value.key == key {
+			st.table.Select(row+1, 0)
+			break
+		}
+	}
+	return st
+}
+
 func (st *SortedTable) sortData() {
 	sort.SliceStable(st.values, func(row1, row2 int) bool {
 		row1Value := st.values[row1].data
@@ -257,6 +278,8 @@ func (st *SortedTable) updateData() {
 
 func (st *SortedTable) Redraw() {
 	st.redrawHeaders()
+	selectedKey := st.GetSelection()
 	st.sortData()
 	st.updateData()
+	st.Select(selectedKey)
 }
