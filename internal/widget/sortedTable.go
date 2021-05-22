@@ -1,7 +1,10 @@
 package widget
 
 import (
+	"fmt"
+	"reflect"
 	"sort"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -9,7 +12,6 @@ import (
 
 type SortableRow interface {
 	Strings() []string
-	LessThan(Other SortableRow, column int) bool
 }
 
 type tableRow struct {
@@ -135,7 +137,33 @@ func (st *SortedTable) SetSelectionChangedFunc(handler func(key string)) *Sorted
 	return st
 }
 
-func (st *SortedTable) SetHeaders(headers ...string) *SortedTable {
+func (st *SortedTable) SetupFromType(value interface{}) *SortedTable {
+	var headers []string
+	v := reflect.TypeOf(value)
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i)
+		t, ok := f.Tag.Lookup("header")
+		if ok {
+			headers = append(headers, t)
+		}
+		t, ok = f.Tag.Lookup("data-align")
+		if ok {
+			switch t {
+			case "left":
+				st.SetColumnAlign(i, tview.AlignLeft)
+			case "center":
+				st.SetColumnAlign(i, tview.AlignCenter)
+			case "right":
+				st.SetColumnAlign(i, tview.AlignRight)
+			default:
+				panic("unexpected align")
+			}
+		}
+	}
+	return st.setHeaders(headers...)
+}
+
+func (st *SortedTable) setHeaders(headers ...string) *SortedTable {
 	for colIndex := len(headers); colIndex < st.table.GetColumnCount(); colIndex++ {
 		cell := st.table.GetCell(0, colIndex)
 		cell.Text = ""
@@ -244,7 +272,29 @@ func (st *SortedTable) sortData() {
 		} else if row1Value == nil {
 			return false
 		} else {
-			return row1Value.LessThan(row2Value, st.sortColumn) != st.sortReverse
+			// TODO: We should validate the types are the same, and also
+			//       ensure it matches what was passed to SetupFromType.
+			v1 := reflect.ValueOf(row1Value).Elem()
+			v2 := reflect.ValueOf(row2Value).Elem()
+			if v1.NumField() != v2.NumField() || v1.NumField() < st.sortColumn {
+				return false
+			}
+			f1 := v1.Field(st.sortColumn)
+			f2 := v2.Field(st.sortColumn)
+			switch f1.Kind() {
+			case reflect.String:
+				return f1.String() < f2.String() != st.sortReverse
+			case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
+				return f1.Int() < f2.Int() != st.sortReverse
+			case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
+				return f1.Uint() < f2.Uint() != st.sortReverse
+			}
+			switch c1 := f1.Interface().(type) {
+			case time.Time:
+				return c1.Before(f2.Interface().(time.Time)) != st.sortReverse
+			default:
+				panic(fmt.Sprintf("unexpected type, kind=%d", v1.Field(st.sortColumn).Kind()))
+			}
 		}
 	})
 }
