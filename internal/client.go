@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/gob"
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -17,8 +18,8 @@ import (
 type Client struct {
 	app                *tview.Application
 	activePlotsTable   *widget.SortedTable
+	plotDirsTable      *widget.SortedTable
 	targetTable        *tview.Table
-	tmpTable           *tview.Table
 	archivedPlotsTable *widget.SortedTable
 
 	logTextbox          *tview.TextView
@@ -100,7 +101,7 @@ func (client *Client) checkServer(host string) {
 		}
 		client.msg[host] = msg
 		client.drawActivePlotsTable()
-		client.drawTempTable()
+		client.drawPlotDirsTable()
 		client.drawTargetTable()
 		client.drawArchivedPlotsTable()
 
@@ -114,41 +115,6 @@ func (client *Client) checkServer(host string) {
 			client.logTextbox.ScrollToEnd()
 		}
 	})
-}
-
-func (client *Client) drawTempTable() {
-	client.tmpTable.Clear()
-	client.tmpTable.SetCell(0, 0, tview.NewTableCell("Host").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 1, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 2, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 3, tview.NewTableCell("Avg Phase1").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 4, tview.NewTableCell("Avg Phase2").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 5, tview.NewTableCell("Avg Phase3").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 6, tview.NewTableCell("Avg Phase4").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-
-	row := 1
-	for _, host := range client.hosts {
-		msg, found := client.msg[host]
-		if !found {
-			continue
-		}
-		pathList := []string{}
-		for k, _ := range msg.TempDirs {
-			pathList = append(pathList, k)
-		}
-		sort.Strings(pathList)
-		for _, path := range pathList {
-			client.tmpTable.SetCell(row, 0, tview.NewTableCell(host))
-			client.tmpTable.SetCell(row, 1, tview.NewTableCell(path))
-			availableSpace := msg.TempDirs[path] / GB
-			client.tmpTable.SetCell(row, 2, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 3, tview.NewTableCell(client.AvgPhase1(host, path)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 4, tview.NewTableCell(client.AvgPhase2(host, path)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 5, tview.NewTableCell(client.AvgPhase3(host, path)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 6, tview.NewTableCell(client.AvgPhase4(host, path)).SetAlign(tview.AlignRight))
-			row++
-		}
-	}
 }
 
 func (client *Client) drawTargetTable() {
@@ -190,9 +156,13 @@ func (client *Client) setupUI() {
 	client.activePlotsTable.SetSelectionChangedFunc(client.selectActivePlot)
 	client.activePlotsTable.SetupFromType(activePlotsData{})
 
-	client.tmpTable = tview.NewTable()
-	client.tmpTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Plot Directories")
-	client.tmpTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.plotDirsTable = widget.NewSortedTable()
+	client.plotDirsTable.SetSelectable(true)
+	client.plotDirsTable.SetBorder(true)
+	client.plotDirsTable.SetTitleAlign(tview.AlignLeft)
+	client.plotDirsTable.SetTitle(" Plot Directories ")
+	client.plotDirsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.plotDirsTable.SetupFromType(plotDirData{})
 
 	client.targetTable = tview.NewTable()
 	client.targetTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Dest Directories")
@@ -216,7 +186,7 @@ func (client *Client) setupUI() {
 
 	dirPanel := tview.NewFlex()
 	dirPanel.SetDirection(tview.FlexColumn)
-	dirPanel.AddItem(client.tmpTable, 0, 1, false)
+	dirPanel.AddItem(client.plotDirsTable, 0, 1, false)
 	dirPanel.AddItem(client.targetTable, 0, 1, false)
 
 	mainPanel := tview.NewFlex()
@@ -325,6 +295,98 @@ func (client *Client) selectActivePlot(key string) {
 	} else {
 		client.logTextbox.SetText("")
 	}
+}
+
+// Plot directories
+
+type plotDirData struct {
+	Host           string        `header:"Host"`
+	PlotDir        string        `header:"Directory"`
+	AvailableBytes uint64        `header:"Available Space" data-align:"right"`
+	AvgPhase1      time.Duration `header:"Avg Phase 1" data-align:"right"`
+	AvgPhase2      time.Duration `header:"Avg Phase 2" data-align:"right"`
+	AvgPhase3      time.Duration `header:"Avg Phase 3" data-align:"right"`
+	AvgPhase4      time.Duration `header:"Avg Phase 4" data-align:"right"`
+
+	count int
+}
+
+func (pdd *plotDirData) Strings() []string {
+	return []string{
+		pdd.Host,
+		pdd.PlotDir,
+		fmt.Sprintf("%d GB", pdd.AvailableBytes/GB),
+		DurationString(pdd.AvgPhase1),
+		DurationString(pdd.AvgPhase2),
+		DurationString(pdd.AvgPhase3),
+		DurationString(pdd.AvgPhase4),
+	}
+}
+
+func (client *Client) makePlotDirsData() map[string]*plotDirData {
+	plotDirs := make(map[string]*plotDirData)
+
+	for host, msg := range client.msg {
+		for plotDir, plotSpace := range msg.TempDirs {
+			plotDirs[host+"||"+plotDir] = &plotDirData{
+				Host:           host,
+				PlotDir:        plotDir,
+				AvailableBytes: plotSpace,
+			}
+		}
+
+		for _, plot := range msg.Archived {
+			if plot.State != PlotFinished {
+				continue
+			}
+			pdd, ok := plotDirs[host+"||"+plot.PlotDir]
+			if !ok {
+				// There's data from a completed plot, but we're no longer using it
+				pdd = &plotDirData{
+					Host:           host,
+					PlotDir:        plot.PlotDir,
+					AvailableBytes: math.MaxUint64,
+				}
+				plotDirs[host+"||"+plot.PlotDir] = pdd
+			}
+
+			pdd.AvgPhase1 += plot.getPhaseTime(1).Sub(plot.getPhaseTime(0))
+			pdd.AvgPhase2 += plot.getPhaseTime(2).Sub(plot.getPhaseTime(1))
+			pdd.AvgPhase3 += plot.getPhaseTime(3).Sub(plot.getPhaseTime(2))
+			pdd.AvgPhase4 += plot.getPhaseTime(4).Sub(plot.getPhaseTime(3))
+			pdd.count++
+		}
+	}
+
+	for _, pdd := range plotDirs {
+		if pdd.count > 0 {
+			pdd.AvgPhase1 /= time.Duration(pdd.count)
+			pdd.AvgPhase2 /= time.Duration(pdd.count)
+			pdd.AvgPhase3 /= time.Duration(pdd.count)
+			pdd.AvgPhase4 /= time.Duration(pdd.count)
+		}
+	}
+	return plotDirs
+}
+
+func (client *Client) drawPlotDirsTable() {
+	plotDirs := client.makePlotDirsData()
+
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.plotDirsTable.Keys() {
+		keysToRemove[key] = struct{}{}
+	}
+
+	for key, pdd := range plotDirs {
+		delete(keysToRemove, key)
+		client.plotDirsTable.SetRowData(key, pdd)
+	}
+
+	for key, _ := range keysToRemove {
+		client.plotDirsTable.ClearRowData(key)
+	}
+
+	client.plotDirsTable.SetTitle(fmt.Sprintf(" Plot Directories [%d] ", len(plotDirs)))
 }
 
 // Archived plots
