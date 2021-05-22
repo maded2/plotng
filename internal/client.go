@@ -188,9 +188,7 @@ func (client *Client) setupUI() {
 	client.activePlotsTable.SetTitle(" Active Plots ")
 	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
 	client.activePlotsTable.SetSelectionChangedFunc(client.selectActivePlot)
-	client.activePlotsTable.SetHeaders(activePlotsHeaders...)
-	client.activePlotsTable.SetColumnAlign(3, tview.AlignRight)
-	client.activePlotsTable.SetColumnAlign(4, tview.AlignRight)
+	client.activePlotsTable.SetupFromType(activePlotsData{})
 
 	client.tmpTable = tview.NewTable()
 	client.tmpTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Plot Directories")
@@ -207,8 +205,7 @@ func (client *Client) setupUI() {
 	client.archivedPlotsTable.SetTitle(" Archived Plots ")
 	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
 	client.archivedPlotsTable.SetSelectionChangedFunc(client.selectArchivedPlot)
-	client.archivedPlotsTable.SetHeaders(archivedPlotsHeaders...)
-	client.archivedPlotsTable.SetColumnAlign(3, tview.AlignRight)
+	client.archivedPlotsTable.SetupFromType(archivedPlotData{})
 
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle(" Log ").SetTitleAlign(tview.AlignLeft)
@@ -244,27 +241,15 @@ func shortenPlotId(id string) string {
 // Active plots
 
 type activePlotsData struct {
-	Host      string
-	PlotId    string
-	Status    int
-	Phase     int
-	Progress  int
-	StartTime time.Time
-	Duration  time.Duration
-	PlotDir   string
-	DestDir   string
-}
-
-var activePlotsHeaders = []string{
-	"Host",
-	"Plot ID",
-	"Status",
-	"Phase",
-	"Progress",
-	"Start Time",
-	"Duration",
-	"Plot Dir",
-	"Dest Dir",
+	Host      string        `header:"Host"`
+	PlotId    string        `header:"Plot ID"`
+	Status    int           `header:"Status"`
+	Phase     int           `header:"Phase"    data-align:"right"`
+	Progress  int           `header:"Progress" data-align:"right"`
+	StartTime time.Time     `header:"Start Time"`
+	Duration  time.Duration `header:"Duration"`
+	PlotDir   string        `header:"Plot Dir"`
+	DestDir   string        `header:"Dest Dir"`
 }
 
 func (apd *activePlotsData) Strings() []string {
@@ -287,32 +272,6 @@ func (apd *activePlotsData) Strings() []string {
 		DurationString(apd.Duration),
 		apd.PlotDir,
 		apd.DestDir,
-	}
-}
-
-func (apd *activePlotsData) LessThan(Other widget.SortableRow, column int) bool {
-	other := Other.(*activePlotsData)
-	switch column {
-	case 0:
-		return apd.Host < other.Host
-	case 1:
-		return apd.PlotId < other.PlotId
-	case 2:
-		return apd.Status < other.Status
-	case 3:
-		return apd.Phase < other.Phase
-	case 4:
-		return apd.Progress < other.Progress
-	case 5:
-		return apd.StartTime.Before(other.StartTime)
-	case 6:
-		return apd.Duration < other.Duration
-	case 7:
-		return apd.PlotDir < other.PlotDir
-	case 8:
-		return apd.DestDir < other.DestDir
-	default:
-		panic("unknown column")
 	}
 }
 
@@ -371,27 +330,15 @@ func (client *Client) selectActivePlot(key string) {
 // Archived plots
 
 type archivedPlotData struct {
-	Host      string
-	PlotId    string
-	Status    int
-	Phase     int
-	StartTime time.Time
-	EndTime   time.Time
-	Duration  time.Duration
-	PlotDir   string
-	DestDir   string
-}
-
-var archivedPlotsHeaders = []string{
-	"Host",       // 0
-	"Plot Id",    // 1
-	"Status",     // 2
-	"Phase",      // 3
-	"Start Time", // 4
-	"End Time",   // 5
-	"Duration",   // 6
-	"Plot Dir",   // 7
-	"Dest Dir",   // 8
+	Host      string        `header:"Host"`
+	PlotId    string        `header:"Plot Id"`
+	Status    int           `header:"Status"`
+	Phase     int           `header:"Phase" data-align:"right"`
+	StartTime time.Time     `header:"Start Time"`
+	EndTime   time.Time     `header:"End Time"`
+	Duration  time.Duration `header:"Duration"`
+	PlotDir   string        `header:"Plot Dir"`
+	DestDir   string        `header:"Dest Dir"`
 }
 
 func (apd *archivedPlotData) Strings() []string {
@@ -414,32 +361,6 @@ func (apd *archivedPlotData) Strings() []string {
 		DurationString(apd.Duration),
 		apd.PlotDir,
 		apd.DestDir,
-	}
-}
-
-func (apd *archivedPlotData) LessThan(Other widget.SortableRow, column int) bool {
-	other := Other.(*archivedPlotData)
-	switch column {
-	case 0:
-		return apd.Host < other.Host
-	case 1:
-		return apd.PlotId < other.PlotId
-	case 2:
-		return apd.Status < other.Status
-	case 3:
-		return apd.Phase < other.Phase
-	case 4:
-		return apd.StartTime.Before(other.StartTime)
-	case 5:
-		return apd.EndTime.Before(other.EndTime)
-	case 6:
-		return apd.Duration < other.Duration
-	case 7:
-		return apd.PlotDir < other.PlotDir
-	case 8:
-		return apd.DestDir < other.DestDir
-	default:
-		panic("unknown column")
 	}
 }
 
