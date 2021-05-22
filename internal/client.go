@@ -307,8 +307,7 @@ type plotDirData struct {
 	AvgPhase2      time.Duration `header:"Avg Phase 2" data-align:"right"`
 	AvgPhase3      time.Duration `header:"Avg Phase 3" data-align:"right"`
 	AvgPhase4      time.Duration `header:"Avg Phase 4" data-align:"right"`
-
-	count int
+	Count          int           `header:"Count" data-align:"right"`
 }
 
 func (pdd *plotDirData) Strings() []string {
@@ -320,6 +319,7 @@ func (pdd *plotDirData) Strings() []string {
 		DurationString(pdd.AvgPhase2),
 		DurationString(pdd.AvgPhase3),
 		DurationString(pdd.AvgPhase4),
+		fmt.Sprintf("%d", pdd.Count),
 	}
 }
 
@@ -354,16 +354,16 @@ func (client *Client) makePlotDirsData() map[string]*plotDirData {
 			pdd.AvgPhase2 += plot.getPhaseTime(2).Sub(plot.getPhaseTime(1))
 			pdd.AvgPhase3 += plot.getPhaseTime(3).Sub(plot.getPhaseTime(2))
 			pdd.AvgPhase4 += plot.getPhaseTime(4).Sub(plot.getPhaseTime(3))
-			pdd.count++
+			pdd.Count++
 		}
 	}
 
 	for _, pdd := range plotDirs {
-		if pdd.count > 0 {
-			pdd.AvgPhase1 /= time.Duration(pdd.count)
-			pdd.AvgPhase2 /= time.Duration(pdd.count)
-			pdd.AvgPhase3 /= time.Duration(pdd.count)
-			pdd.AvgPhase4 /= time.Duration(pdd.count)
+		if pdd.Count > 0 {
+			pdd.AvgPhase1 /= time.Duration(pdd.Count)
+			pdd.AvgPhase2 /= time.Duration(pdd.Count)
+			pdd.AvgPhase3 /= time.Duration(pdd.Count)
+			pdd.AvgPhase4 /= time.Duration(pdd.Count)
 		}
 	}
 	return plotDirs
