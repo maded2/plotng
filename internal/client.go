@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -19,7 +18,7 @@ type Client struct {
 	app                *tview.Application
 	activePlotsTable   *widget.SortedTable
 	plotDirsTable      *widget.SortedTable
-	targetTable        *tview.Table
+	destDirsTable      *widget.SortedTable
 	archivedPlotsTable *widget.SortedTable
 
 	logTextbox          *tview.TextView
@@ -102,7 +101,7 @@ func (client *Client) checkServer(host string) {
 		client.msg[host] = msg
 		client.drawActivePlotsTable()
 		client.drawPlotDirsTable()
-		client.drawTargetTable()
+		client.drawDestDirsTable()
 		client.drawArchivedPlotsTable()
 
 		log, ok := client.activeLogs[client.logPlotId]
@@ -115,34 +114,6 @@ func (client *Client) checkServer(host string) {
 			client.logTextbox.ScrollToEnd()
 		}
 	})
-}
-
-func (client *Client) drawTargetTable() {
-	client.targetTable.Clear()
-	client.targetTable.SetCell(0, 0, tview.NewTableCell("Host").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.targetTable.SetCell(0, 1, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.targetTable.SetCell(0, 2, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.targetTable.SetCell(0, 3, tview.NewTableCell("Avg Plot Time").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	row := 1
-	for _, host := range client.hosts {
-		msg, found := client.msg[host]
-		if !found {
-			continue
-		}
-		pathList := []string{}
-		for k, _ := range msg.TargetDirs {
-			pathList = append(pathList, k)
-		}
-		sort.Strings(pathList)
-		for _, path := range pathList {
-			client.targetTable.SetCell(row, 0, tview.NewTableCell(host))
-			client.targetTable.SetCell(row, 1, tview.NewTableCell(path))
-			availableSpace := msg.TargetDirs[path] / GB
-			client.targetTable.SetCell(row, 2, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
-			client.targetTable.SetCell(row, 3, tview.NewTableCell(client.computeAvgTargetTime(host, path)).SetAlign(tview.AlignRight))
-			row++
-		}
-	}
 }
 
 func (client *Client) setupUI() {
@@ -164,9 +135,13 @@ func (client *Client) setupUI() {
 	client.plotDirsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
 	client.plotDirsTable.SetupFromType(plotDirData{})
 
-	client.targetTable = tview.NewTable()
-	client.targetTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Dest Directories")
-	client.targetTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.destDirsTable = widget.NewSortedTable()
+	client.destDirsTable.SetSelectable(true)
+	client.destDirsTable.SetBorder(true)
+	client.destDirsTable.SetTitleAlign(tview.AlignLeft)
+	client.destDirsTable.SetTitle(" Dest Directories ")
+	client.destDirsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.destDirsTable.SetupFromType(destDirData{})
 
 	client.archivedPlotsTable = widget.NewSortedTable()
 	client.archivedPlotsTable.SetSelectable(true)
@@ -187,7 +162,7 @@ func (client *Client) setupUI() {
 	dirPanel := tview.NewFlex()
 	dirPanel.SetDirection(tview.FlexColumn)
 	dirPanel.AddItem(client.plotDirsTable, 0, 1, false)
-	dirPanel.AddItem(client.targetTable, 0, 1, false)
+	dirPanel.AddItem(client.destDirsTable, 0, 1, false)
 
 	mainPanel := tview.NewFlex()
 	mainPanel.SetDirection(tview.FlexRow)
@@ -315,7 +290,7 @@ func (pdd *plotDirData) Strings() []string {
 	return []string{
 		pdd.Host,
 		pdd.PlotDir,
-		fmt.Sprintf("%d GB", pdd.AvailableBytes/GB),
+		SpaceString(pdd.AvailableBytes),
 		DurationString(pdd.AvgPhase1),
 		DurationString(pdd.AvgPhase2),
 		DurationString(pdd.AvgPhase3),
@@ -390,6 +365,89 @@ func (client *Client) drawPlotDirsTable() {
 	}
 
 	client.plotDirsTable.SetTitle(fmt.Sprintf(" Plot Directories [%d] ", len(plotDirs)))
+}
+
+// Dest Directories
+
+type destDirData struct {
+	Host           string        `header:"Host"`
+	DestDir        string        `header:"Directory"`
+	AvailableBytes uint64        `header:"Available Space" data-align:"right"`
+	AvgPlotTime    time.Duration `header:"Avg Plot Time" data-align:"right"`
+	Count          int           `header:"Count" data-align:"right"`
+	Failed         int           `header:"Failed" data-align:"right"`
+}
+
+func (ddd *destDirData) Strings() []string {
+	return []string{
+		ddd.Host,
+		ddd.DestDir,
+		SpaceString(ddd.AvailableBytes),
+		DurationString(ddd.AvgPlotTime),
+		fmt.Sprintf("%d", ddd.Count),
+		fmt.Sprintf("%d", ddd.Failed),
+	}
+}
+
+func (client *Client) makeDestDirsData() map[string]*destDirData {
+	destDirs := make(map[string]*destDirData)
+
+	for host, msg := range client.msg {
+		for destDir, plotSpace := range msg.TargetDirs {
+			destDirs[host+"||"+destDir] = &destDirData{
+				Host:           host,
+				DestDir:        destDir,
+				AvailableBytes: plotSpace,
+			}
+		}
+
+		for _, plot := range msg.Archived {
+			ddd, ok := destDirs[host+"||"+plot.TargetDir]
+			if !ok {
+				// There's data from a completed plot, but we're no longer using it
+				ddd = &destDirData{
+					Host:           host,
+					DestDir:        plot.TargetDir,
+					AvailableBytes: math.MaxUint64,
+				}
+				destDirs[host+"||"+plot.TargetDir] = ddd
+			}
+			switch plot.State {
+			case PlotFinished:
+				ddd.AvgPlotTime += plot.getPhaseTime(4).Sub(plot.getPhaseTime(0))
+				ddd.Count++
+			case PlotError, PlotKilled:
+				ddd.Failed++
+			}
+		}
+	}
+
+	for _, ddd := range destDirs {
+		if ddd.Count > 0 {
+			ddd.AvgPlotTime /= time.Duration(ddd.Count)
+		}
+	}
+	return destDirs
+}
+
+func (client *Client) drawDestDirsTable() {
+	destDirs := client.makeDestDirsData()
+
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.destDirsTable.Keys() {
+		keysToRemove[key] = struct{}{}
+	}
+
+	for key, ddd := range destDirs {
+		delete(keysToRemove, key)
+		client.destDirsTable.SetRowData(key, ddd)
+	}
+
+	for key, _ := range keysToRemove {
+		client.destDirsTable.ClearRowData(key)
+	}
+
+	client.destDirsTable.SetTitle(fmt.Sprintf(" Dest Directories [%d] ", len(destDirs)))
 }
 
 // Archived plots
