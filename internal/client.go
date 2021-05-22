@@ -308,6 +308,7 @@ type plotDirData struct {
 	AvgPhase3      time.Duration `header:"Avg Phase 3" data-align:"right"`
 	AvgPhase4      time.Duration `header:"Avg Phase 4" data-align:"right"`
 	Count          int           `header:"Count" data-align:"right"`
+	Failed         int           `header:"Failed" data-align:"right"`
 }
 
 func (pdd *plotDirData) Strings() []string {
@@ -320,6 +321,7 @@ func (pdd *plotDirData) Strings() []string {
 		DurationString(pdd.AvgPhase3),
 		DurationString(pdd.AvgPhase4),
 		fmt.Sprintf("%d", pdd.Count),
+		fmt.Sprintf("%d", pdd.Failed),
 	}
 }
 
@@ -336,9 +338,6 @@ func (client *Client) makePlotDirsData() map[string]*plotDirData {
 		}
 
 		for _, plot := range msg.Archived {
-			if plot.State != PlotFinished {
-				continue
-			}
 			pdd, ok := plotDirs[host+"||"+plot.PlotDir]
 			if !ok {
 				// There's data from a completed plot, but we're no longer using it
@@ -349,12 +348,16 @@ func (client *Client) makePlotDirsData() map[string]*plotDirData {
 				}
 				plotDirs[host+"||"+plot.PlotDir] = pdd
 			}
-
-			pdd.AvgPhase1 += plot.getPhaseTime(1).Sub(plot.getPhaseTime(0))
-			pdd.AvgPhase2 += plot.getPhaseTime(2).Sub(plot.getPhaseTime(1))
-			pdd.AvgPhase3 += plot.getPhaseTime(3).Sub(plot.getPhaseTime(2))
-			pdd.AvgPhase4 += plot.getPhaseTime(4).Sub(plot.getPhaseTime(3))
-			pdd.Count++
+			switch plot.State {
+			case PlotFinished:
+				pdd.AvgPhase1 += plot.getPhaseTime(1).Sub(plot.getPhaseTime(0))
+				pdd.AvgPhase2 += plot.getPhaseTime(2).Sub(plot.getPhaseTime(1))
+				pdd.AvgPhase3 += plot.getPhaseTime(3).Sub(plot.getPhaseTime(2))
+				pdd.AvgPhase4 += plot.getPhaseTime(4).Sub(plot.getPhaseTime(3))
+				pdd.Count++
+			case PlotError, PlotKilled:
+				pdd.Failed++
+			}
 		}
 	}
 
@@ -441,7 +444,8 @@ func (client *Client) makeArchivedPlotData(host string, p *ActivePlot) *archived
 }
 
 func (client *Client) drawArchivedPlotsTable() {
-	archivedPlotsCount := 0
+	archivedPlotsSuccess := 0
+	archivedPlotsFailed := 0
 	client.archivedLogs = make(map[string][]string)
 
 	keysToRemove := make(map[string]struct{})
@@ -454,7 +458,14 @@ func (client *Client) drawArchivedPlotsTable() {
 			delete(keysToRemove, plot.Id)
 			client.archivedLogs[plot.Id] = plot.Tail
 			client.archivedPlotsTable.SetRowData(plot.Id, client.makeArchivedPlotData(host, plot))
-			archivedPlotsCount++
+			switch plot.State {
+			case PlotFinished:
+				archivedPlotsSuccess++
+			case PlotKilled:
+				archivedPlotsFailed++
+			case PlotError:
+				archivedPlotsFailed++
+			}
 		}
 	}
 
@@ -462,7 +473,11 @@ func (client *Client) drawArchivedPlotsTable() {
 		client.archivedPlotsTable.ClearRowData(key)
 	}
 
-	client.archivedPlotsTable.SetTitle(fmt.Sprintf(" Archived Plots [%d] ", archivedPlotsCount))
+	if archivedPlotsFailed > 0 {
+		client.archivedPlotsTable.SetTitle(fmt.Sprintf(" Archived Plots [%d (%d failed)] ", archivedPlotsSuccess, archivedPlotsFailed))
+	} else {
+		client.archivedPlotsTable.SetTitle(fmt.Sprintf(" Archived Plots [%d] ", archivedPlotsSuccess))
+	}
 }
 
 func (client *Client) selectArchivedPlot(key string) {
