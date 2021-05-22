@@ -244,14 +244,15 @@ func shortenPlotId(id string) string {
 // Active plots
 
 type activePlotsData struct {
-	host      string
-	plotId    string
-	status    int
-	phase     int
-	progress  int
-	startTime time.Time
-	plotDir   string
-	destDir   string
+	Host      string
+	PlotId    string
+	Status    int
+	Phase     int
+	Progress  int
+	StartTime time.Time
+	Duration  time.Duration
+	PlotDir   string
+	DestDir   string
 }
 
 var activePlotsHeaders = []string{
@@ -268,7 +269,7 @@ var activePlotsHeaders = []string{
 
 func (apd *activePlotsData) Strings() []string {
 	status := "Unknown"
-	switch apd.status {
+	switch apd.Status {
 	case PlotRunning:
 		status = "Running"
 	case PlotError:
@@ -277,15 +278,15 @@ func (apd *activePlotsData) Strings() []string {
 		status = "Finished"
 	}
 	return []string{
-		apd.host,
-		shortenPlotId(apd.plotId),
+		apd.Host,
+		shortenPlotId(apd.PlotId),
 		status,
-		fmt.Sprintf("%d/4", apd.phase),
-		fmt.Sprintf("%d%%", apd.progress),
-		apd.startTime.Format("2006-01-02 15:04:05"),
-		DurationString(time.Now().Sub(apd.startTime)),
-		apd.plotDir,
-		apd.destDir,
+		fmt.Sprintf("%d/4", apd.Phase),
+		fmt.Sprintf("%d%%", apd.Progress),
+		apd.StartTime.Format("2006-01-02 15:04:05"),
+		DurationString(apd.Duration),
+		apd.PlotDir,
+		apd.DestDir,
 	}
 }
 
@@ -293,21 +294,23 @@ func (apd *activePlotsData) LessThan(Other widget.SortableRow, column int) bool 
 	other := Other.(*activePlotsData)
 	switch column {
 	case 0:
-		return apd.host < other.host
+		return apd.Host < other.Host
 	case 1:
-		return apd.plotId < other.plotId
+		return apd.PlotId < other.PlotId
 	case 2:
-		return apd.status < other.status
+		return apd.Status < other.Status
 	case 3:
-		return apd.phase < other.phase
+		return apd.Phase < other.Phase
 	case 4:
-		return apd.progress < other.progress
-	case 5, 6:
-		return apd.startTime.Before(other.startTime)
+		return apd.Progress < other.Progress
+	case 5:
+		return apd.StartTime.Before(other.StartTime)
+	case 6:
+		return apd.Duration < other.Duration
 	case 7:
-		return apd.plotDir < other.plotDir
+		return apd.PlotDir < other.PlotDir
 	case 8:
-		return apd.destDir < other.destDir
+		return apd.DestDir < other.DestDir
 	default:
 		panic("unknown column")
 	}
@@ -315,14 +318,15 @@ func (apd *activePlotsData) LessThan(Other widget.SortableRow, column int) bool 
 
 func (client *Client) makeActivePlotsData(host string, p *ActivePlot) *activePlotsData {
 	apd := &activePlotsData{}
-	apd.host = host
-	apd.plotId = p.Id
-	apd.status = p.State
-	apd.phase = p.getCurrentPhase()
-	apd.progress = p.getProgress()
-	apd.startTime = p.getPhaseTime(0)
-	apd.plotDir = p.PlotDir
-	apd.destDir = p.TargetDir
+	apd.Host = host
+	apd.PlotId = p.Id
+	apd.Status = p.State
+	apd.Phase = p.getCurrentPhase()
+	apd.Progress = p.getProgress()
+	apd.StartTime = p.getPhaseTime(0)
+	apd.Duration = time.Since(apd.StartTime)
+	apd.PlotDir = p.PlotDir
+	apd.DestDir = p.TargetDir
 	return apd
 }
 
@@ -367,14 +371,15 @@ func (client *Client) selectActivePlot(key string) {
 // Archived plots
 
 type archivedPlotData struct {
-	host      string
-	plotId    string
-	status    int
-	phase     int
-	startTime time.Time
-	endTime   time.Time
-	plotDir   string
-	destDir   string
+	Host      string
+	PlotId    string
+	Status    int
+	Phase     int
+	StartTime time.Time
+	EndTime   time.Time
+	Duration  time.Duration
+	PlotDir   string
+	DestDir   string
 }
 
 var archivedPlotsHeaders = []string{
@@ -391,7 +396,7 @@ var archivedPlotsHeaders = []string{
 
 func (apd *archivedPlotData) Strings() []string {
 	status := "Unknown"
-	switch apd.status {
+	switch apd.Status {
 	case PlotRunning:
 		status = "Running"
 	case PlotError:
@@ -400,15 +405,15 @@ func (apd *archivedPlotData) Strings() []string {
 		status = "Finished"
 	}
 	return []string{
-		apd.host,
-		shortenPlotId(apd.plotId),
+		apd.Host,
+		shortenPlotId(apd.PlotId),
 		status,
-		fmt.Sprintf("%d/4", apd.phase),
-		apd.startTime.Format("2006-01-02 15:04:05"),
-		apd.endTime.Format("2006-01-02 15:04:05"),
-		DurationString(apd.endTime.Sub(apd.startTime)),
-		apd.plotDir,
-		apd.destDir,
+		fmt.Sprintf("%d/4", apd.Phase),
+		apd.StartTime.Format("2006-01-02 15:04:05"),
+		apd.EndTime.Format("2006-01-02 15:04:05"),
+		DurationString(apd.Duration),
+		apd.PlotDir,
+		apd.DestDir,
 	}
 }
 
@@ -416,23 +421,23 @@ func (apd *archivedPlotData) LessThan(Other widget.SortableRow, column int) bool
 	other := Other.(*archivedPlotData)
 	switch column {
 	case 0:
-		return apd.host < other.host
+		return apd.Host < other.Host
 	case 1:
-		return apd.plotId < other.plotId
+		return apd.PlotId < other.PlotId
 	case 2:
-		return apd.status < other.status
+		return apd.Status < other.Status
 	case 3:
-		return apd.phase < other.phase
+		return apd.Phase < other.Phase
 	case 4:
-		return apd.startTime.Before(other.startTime)
+		return apd.StartTime.Before(other.StartTime)
 	case 5:
-		return apd.endTime.Before(other.endTime)
+		return apd.EndTime.Before(other.EndTime)
 	case 6:
-		return apd.endTime.Sub(apd.startTime) < other.endTime.Sub(apd.endTime)
+		return apd.Duration < other.Duration
 	case 7:
-		return apd.plotDir < other.plotDir
+		return apd.PlotDir < other.PlotDir
 	case 8:
-		return apd.destDir < other.destDir
+		return apd.DestDir < other.DestDir
 	default:
 		panic("unknown column")
 	}
@@ -440,14 +445,15 @@ func (apd *archivedPlotData) LessThan(Other widget.SortableRow, column int) bool
 
 func (client *Client) makeArchivedPlotData(host string, p *ActivePlot) *archivedPlotData {
 	apd := &archivedPlotData{}
-	apd.host = host
-	apd.plotId = p.Id
-	apd.status = p.State
-	apd.phase = p.getCurrentPhase()
-	apd.startTime = p.getPhaseTime(0)
-	apd.endTime = p.getPhaseTime(4)
-	apd.plotDir = p.PlotDir
-	apd.destDir = p.TargetDir
+	apd.Host = host
+	apd.PlotId = p.Id
+	apd.Status = p.State
+	apd.Phase = p.getCurrentPhase()
+	apd.StartTime = p.getPhaseTime(0)
+	apd.EndTime = p.getPhaseTime(4)
+	apd.Duration = apd.EndTime.Sub(apd.StartTime)
+	apd.PlotDir = p.PlotDir
+	apd.DestDir = p.TargetDir
 	return apd
 }
 
