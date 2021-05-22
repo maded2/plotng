@@ -100,6 +100,7 @@ func (server *Server) createNewPlot(config *Config) {
 		}
 
 		if config.MaxActivePlotPerPhase1 <= sum {
+			log.Printf("Skipping, Too many active plots in Phase 1: %d", sum)
 			return
 		}
 	}
