@@ -34,6 +34,10 @@ type SortedTable struct {
 	selectionChangedFunc func(key string)
 }
 
+func (st *SortedTable) SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) {
+	st.table.SetInputCapture(capture)
+}
+
 // Mostly implement tview.Primitive with proxies
 func (st *SortedTable) Draw(screen tcell.Screen) {
 	st.Redraw()
@@ -54,6 +58,10 @@ func (st *SortedTable) InputHandler() func(event *tcell.EventKey, setFocus func(
 
 func (st *SortedTable) Focus(delegate func(p tview.Primitive)) {
 	st.table.Focus(delegate)
+}
+
+func (st *SortedTable) SetFocus(app *tview.Application) {
+	app.SetFocus(st.table)
 }
 
 func (st *SortedTable) HasFocus() bool {

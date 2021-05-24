@@ -120,24 +120,24 @@ func (client *Client) tabBetweenTables(event *tcell.EventKey) *tcell.EventKey {
 	if event.Key() != tcell.KeyTab {
 		return event
 	}
-	if client.plotTable.HasFocus() {
-		client.app.SetFocus(client.activePlotsTable)
+	if client.activePlotsTable.HasFocus() {
+		client.plotDirsTable.SetFocus(client.app)
 		return nil
 	}
-	if client.tmpTable.HasFocus() {
-		client.app.SetFocus(client.targetTable)
+	if client.plotDirsTable.HasFocus() {
+		client.destDirsTable.SetFocus(client.app)
 		return nil
 	}
-	if client.targetTable.HasFocus() {
-		client.app.SetFocus(client.lastTable)
+	if client.destDirsTable.HasFocus() {
+		client.archivedPlotsTable.SetFocus(client.app)
 		return nil
 	}
-	if client.lastTable.HasFocus() {
+	if client.archivedPlotsTable.HasFocus() {
 		client.app.SetFocus(client.logTextbox)
 		return nil
 	}
 	if client.logTextbox.HasFocus() {
-		client.app.SetFocus(client.plotTable)
+		client.activePlotsTable.SetFocus(client.app)
 		return nil
 	}
 	return event
