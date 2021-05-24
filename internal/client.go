@@ -154,28 +154,60 @@ func (client *Client) drawTargetTable() {
 	}
 }
 
+func (client *Client) tabBetweenTables(event *tcell.EventKey) *tcell.EventKey {
+	if event.Key() != tcell.KeyTab {
+		return event
+	}
+	if client.plotTable.HasFocus() {
+		client.app.SetFocus(client.tmpTable)
+		return nil
+	}
+	if client.tmpTable.HasFocus() {
+		client.app.SetFocus(client.targetTable)
+		return nil
+	}
+	if client.targetTable.HasFocus() {
+		client.app.SetFocus(client.lastTable)
+		return nil
+	}
+	if client.lastTable.HasFocus() {
+		client.app.SetFocus(client.logTextbox)
+		return nil
+	}
+	if client.logTextbox.HasFocus() {
+		client.app.SetFocus(client.plotTable)
+		return nil
+	}
+	return event
+}
+
 func (client *Client) setupUI() {
 	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
 	client.plotTable = tview.NewTable()
 	client.plotTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Active Plots")
 	client.plotTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
 	client.plotTable.SetSelectionChangedFunc(client.selectActivePlot).SetFixed(1, 6)
+	client.plotTable.SetInputCapture(client.tabBetweenTables)
 
 	client.tmpTable = tview.NewTable()
 	client.tmpTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Plot Directories")
 	client.tmpTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.tmpTable.SetInputCapture(client.tabBetweenTables)
 
 	client.targetTable = tview.NewTable()
 	client.targetTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Dest Directories")
 	client.targetTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.targetTable.SetInputCapture(client.tabBetweenTables)
 
 	client.lastTable = tview.NewTable()
 	client.lastTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Archived Plots")
 	client.lastTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
 	client.lastTable.SetSelectionChangedFunc(client.selectArchivedPlot).SetFixed(1, 6)
+	client.lastTable.SetInputCapture(client.tabBetweenTables)
 
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
+	client.logTextbox.SetInputCapture(client.tabBetweenTables)
 
 	client.app = tview.NewApplication()
 
