@@ -3,26 +3,35 @@ package internal
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
+	"math"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+
+	"plotng/internal/widget"
 )
 
 type Client struct {
-	app                 *tview.Application
-	plotTable           *tview.Table
-	targetTable         *tview.Table
-	tmpTable            *tview.Table
-	lastTable           *tview.Table
+	app                *tview.Application
+	activePlotsTable   *widget.SortedTable
+	plotDirsTable      *widget.SortedTable
+	destDirsTable      *widget.SortedTable
+	archivedPlotsTable *widget.SortedTable
+
 	logTextbox          *tview.TextView
 	hosts               []string
 	msg                 map[string]*Msg
 	archivedTableActive bool
-	activeLogs          map[int][]string
-	archivedLogs        map[int][]string
+	activeLogs          map[string][]string
+	archivedLogs        map[string][]string
+	logPlotId           string
+}
+
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second, // This covers the entire request
 }
 
 func (client *Client) ProcessLoop(hostList string) {
@@ -58,100 +67,53 @@ func (client *Client) checkServers() {
 	}
 }
 
-func (client *Client) checkServer(host string) {
-	c := &http.Client{}
+func (client *Client) getServerData(host string) (*Msg, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/", host), nil)
 	if err != nil {
-		client.logTextbox.SetText(err.Error())
+		return nil, err
 	}
-	if resp, err := c.Do(req); err == nil {
+
+	if resp, err := httpClient.Do(req); err == nil {
 		defer resp.Body.Close()
 		var msg Msg
 		decoder := gob.NewDecoder(resp.Body)
 		if err := decoder.Decode(&msg); err == nil {
-			msg := &msg
-			sort.Slice(msg.Actives, func(i, j int) bool {
-				return msg.Actives[i].PlotId < msg.Actives[j].PlotId
-			})
-			sort.Slice(msg.Archived, func(i, j int) bool {
-				return msg.Archived[i].PlotId > msg.Archived[j].PlotId
-			})
-			client.msg[host] = msg
+			return &msg, nil
 		} else {
-			client.logTextbox.SetText(fmt.Sprintf("Failed to decode msg: %s", err))
+			return nil, fmt.Errorf("Failed to decode message: %w", err)
 		}
 	} else {
-		client.logTextbox.SetText(err.Error())
-	}
-
-	client.drawTempTable()
-	client.drawTargetTable()
-	client.drawActivePlots()
-	client.drawArchivedPlots()
-	client.app.Draw()
-}
-
-func (client *Client) drawTempTable() {
-	client.tmpTable.Clear()
-	client.tmpTable.SetCell(0, 0, tview.NewTableCell("Host").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 1, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 2, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 3, tview.NewTableCell("Avg Phase1").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 4, tview.NewTableCell("Avg Phase2").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 5, tview.NewTableCell("Avg Phase3").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.tmpTable.SetCell(0, 6, tview.NewTableCell("Avg Phase4").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-
-	row := 1
-	for _, host := range client.hosts {
-		msg, found := client.msg[host]
-		if !found {
-			continue
-		}
-		pathList := []string{}
-		for k, _ := range msg.TempDirs {
-			pathList = append(pathList, k)
-		}
-		sort.Strings(pathList)
-		for _, path := range pathList {
-			client.tmpTable.SetCell(row, 0, tview.NewTableCell(host))
-			client.tmpTable.SetCell(row, 1, tview.NewTableCell(path))
-			availableSpace := msg.TempDirs[path] / GB
-			client.tmpTable.SetCell(row, 2, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 3, tview.NewTableCell(client.AvgPhase1(host, path)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 4, tview.NewTableCell(client.AvgPhase2(host, path)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 5, tview.NewTableCell(client.AvgPhase3(host, path)).SetAlign(tview.AlignRight))
-			client.tmpTable.SetCell(row, 6, tview.NewTableCell(client.AvgPhase4(host, path)).SetAlign(tview.AlignRight))
-			row++
-		}
+		return nil, err
 	}
 }
 
-func (client *Client) drawTargetTable() {
-	client.targetTable.Clear()
-	client.targetTable.SetCell(0, 0, tview.NewTableCell("Host").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.targetTable.SetCell(0, 1, tview.NewTableCell("Directory").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.targetTable.SetCell(0, 2, tview.NewTableCell("Available Space").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	client.targetTable.SetCell(0, 3, tview.NewTableCell("Avg Plot Time").SetSelectable(false).SetTextColor(tcell.ColorYellow))
-	row := 1
-	for _, host := range client.hosts {
-		msg, found := client.msg[host]
-		if !found {
-			continue
+func (client *Client) checkServer(host string) {
+	// Retrieve data on the goroutine thread
+	msg, err := client.getServerData(host)
+
+	// Modify UI state on the tview thread.
+	client.app.QueueUpdateDraw(func() {
+		if err != nil {
+			client.logTextbox.SetText("Log (error) ")
+			client.logTextbox.SetText(err.Error())
+			return
 		}
-		pathList := []string{}
-		for k, _ := range msg.TargetDirs {
-			pathList = append(pathList, k)
+		client.msg[host] = msg
+		client.drawActivePlotsTable()
+		client.drawPlotDirsTable()
+		client.drawDestDirsTable()
+		client.drawArchivedPlotsTable()
+
+		log, ok := client.activeLogs[client.logPlotId]
+		if !ok {
+			log, ok = client.archivedLogs[client.logPlotId]
 		}
-		sort.Strings(pathList)
-		for _, path := range pathList {
-			client.targetTable.SetCell(row, 0, tview.NewTableCell(host))
-			client.targetTable.SetCell(row, 1, tview.NewTableCell(path))
-			availableSpace := msg.TargetDirs[path] / GB
-			client.targetTable.SetCell(row, 2, tview.NewTableCell(fmt.Sprintf("%d GB", availableSpace)).SetAlign(tview.AlignRight))
-			client.targetTable.SetCell(row, 3, tview.NewTableCell(client.computeAvgTargetTime(host, path)).SetAlign(tview.AlignRight))
-			row++
+		if ok {
+			client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
+			client.logTextbox.SetText(strings.Join(log, ""))
+			client.logTextbox.ScrollToEnd()
 		}
-	}
+	})
 }
 
 func (client *Client) tabBetweenTables(event *tcell.EventKey) *tcell.EventKey {
@@ -159,7 +121,7 @@ func (client *Client) tabBetweenTables(event *tcell.EventKey) *tcell.EventKey {
 		return event
 	}
 	if client.plotTable.HasFocus() {
-		client.app.SetFocus(client.tmpTable)
+		client.app.SetFocus(client.activePlotsTable)
 		return nil
 	}
 	if client.tmpTable.HasFocus() {
@@ -183,44 +145,62 @@ func (client *Client) tabBetweenTables(event *tcell.EventKey) *tcell.EventKey {
 
 func (client *Client) setupUI() {
 	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
-	client.plotTable = tview.NewTable()
-	client.plotTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Active Plots")
-	client.plotTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
-	client.plotTable.SetSelectionChangedFunc(client.selectActivePlot).SetFixed(1, 6)
-	client.plotTable.SetInputCapture(client.tabBetweenTables)
+	client.activePlotsTable = widget.NewSortedTable()
+	client.activePlotsTable.SetSelectable(true)
+	client.activePlotsTable.SetBorder(true)
+	client.activePlotsTable.SetTitleAlign(tview.AlignLeft)
+	client.activePlotsTable.SetTitle(" Active Plots ")
+	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.activePlotsTable.SetSelectionChangedFunc(client.selectActivePlot)
+	client.activePlotsTable.SetupFromType(activePlotsData{})
+	client.activePlotsTable.SetInputCapture(client.tabBetweenTables)
 
-	client.tmpTable = tview.NewTable()
-	client.tmpTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Plot Directories")
-	client.tmpTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
-	client.tmpTable.SetInputCapture(client.tabBetweenTables)
+	client.plotDirsTable = widget.NewSortedTable()
+	client.plotDirsTable.SetSelectable(true)
+	client.plotDirsTable.SetBorder(true)
+	client.plotDirsTable.SetTitleAlign(tview.AlignLeft)
+	client.plotDirsTable.SetTitle(" Plot Directories ")
+	client.plotDirsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.plotDirsTable.SetupFromType(plotDirData{})
+	client.plotDirsTable.SetInputCapture(client.tabBetweenTables)
 
-	client.targetTable = tview.NewTable()
-	client.targetTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Dest Directories")
-	client.targetTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
-	client.targetTable.SetInputCapture(client.tabBetweenTables)
+	client.destDirsTable = widget.NewSortedTable()
+	client.destDirsTable.SetSelectable(true)
+	client.destDirsTable.SetBorder(true)
+	client.destDirsTable.SetTitleAlign(tview.AlignLeft)
+	client.destDirsTable.SetTitle(" Dest Directories ")
+	client.destDirsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.destDirsTable.SetupFromType(destDirData{})
+	client.destDirsTable.SetInputCapture(client.tabBetweenTables)
 
-	client.lastTable = tview.NewTable()
-	client.lastTable.SetSelectable(true, false).SetBorder(true).SetTitleAlign(tview.AlignLeft).SetTitle("Archived Plots")
-	client.lastTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
-	client.lastTable.SetSelectionChangedFunc(client.selectArchivedPlot).SetFixed(1, 6)
-	client.lastTable.SetInputCapture(client.tabBetweenTables)
+	client.archivedPlotsTable = widget.NewSortedTable()
+	client.archivedPlotsTable.SetSelectable(true)
+	client.archivedPlotsTable.SetBorder(true)
+	client.archivedPlotsTable.SetTitleAlign(tview.AlignLeft)
+	client.archivedPlotsTable.SetTitle(" Archived Plots ")
+	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.archivedPlotsTable.SetSelectionChangedFunc(client.selectArchivedPlot)
+	client.archivedPlotsTable.SetupFromType(archivedPlotData{})
+	client.archivedPlotsTable.SetInputCapture(client.tabBetweenTables)
 
 	client.logTextbox = tview.NewTextView()
-	client.logTextbox.SetBorder(true).SetTitle("Log").SetTitleAlign(tview.AlignLeft)
+	client.logTextbox.SetBorder(true).SetTitle(" Log ").SetTitleAlign(tview.AlignLeft)
 	client.logTextbox.SetInputCapture(client.tabBetweenTables)
+
+	client.logTextbox.ScrollToEnd()
 
 	client.app = tview.NewApplication()
 
 	dirPanel := tview.NewFlex()
 	dirPanel.SetDirection(tview.FlexColumn)
-	dirPanel.AddItem(client.tmpTable, 0, 1, false)
-	dirPanel.AddItem(client.targetTable, 0, 1, false)
+	dirPanel.AddItem(client.plotDirsTable, 0, 1, false)
+	dirPanel.AddItem(client.destDirsTable, 0, 1, false)
 
 	mainPanel := tview.NewFlex()
 	mainPanel.SetDirection(tview.FlexRow)
-	mainPanel.AddItem(client.plotTable, 0, 1, true)
+	mainPanel.AddItem(client.activePlotsTable, 0, 1, true)
 	mainPanel.AddItem(dirPanel, 0, 1, false)
-	mainPanel.AddItem(client.lastTable, 0, 1, false)
+	mainPanel.AddItem(client.archivedPlotsTable, 0, 1, false)
 	mainPanel.AddItem(client.logTextbox, 0, 1, false)
 
 	client.app = tview.NewApplication()
@@ -228,229 +208,377 @@ func (client *Client) setupUI() {
 	client.app.EnableMouse(true)
 }
 
-func (client *Client) shortenPlotId(id string) string {
+func shortenPlotId(id string) string {
 	if len(id) < 20 {
 		return ""
 	}
 	return fmt.Sprintf("%s...%s", id[:10], id[len(id)-10:])
 }
 
-func (client *Client) drawActivePlots() {
-	client.plotTable.Clear()
-	client.plotTable.SetCell(0, 0, tview.NewTableCell("Host"))
-	client.plotTable.SetCell(0, 1, tview.NewTableCell("Plot Id"))
-	client.plotTable.SetCell(0, 2, tview.NewTableCell("Status"))
-	client.plotTable.SetCell(0, 3, tview.NewTableCell("Phase"))
-	client.plotTable.SetCell(0, 4, tview.NewTableCell("Progress"))
-	client.plotTable.SetCell(0, 5, tview.NewTableCell("Start Time"))
-	client.plotTable.SetCell(0, 6, tview.NewTableCell("Duration"))
-	client.plotTable.SetCell(0, 7, tview.NewTableCell("Plot Dir"))
-	client.plotTable.SetCell(0, 8, tview.NewTableCell("Dest Dir"))
+// Active plots
 
-	t := time.Now()
-	count := 0
-	client.activeLogs = map[int][]string{}
-	for _, host := range client.hosts {
-		msg, found := client.msg[host]
-		if !found {
-			continue
-		}
+type activePlotsData struct {
+	Host      string        `header:"Host"`
+	PlotId    string        `header:"Plot ID"`
+	Status    int           `header:"Status"`
+	Phase     int           `header:"Phase"    data-align:"right"`
+	Progress  int           `header:"Progress" data-align:"right"`
+	StartTime time.Time     `header:"Start Time"`
+	Duration  time.Duration `header:"Duration"`
+	PlotDir   string        `header:"Plot Dir"`
+	DestDir   string        `header:"Dest Dir"`
+}
+
+func (apd *activePlotsData) Strings() []string {
+	status := "Unknown"
+	switch apd.Status {
+	case PlotRunning:
+		status = "Running"
+	case PlotError:
+		status = "Errored"
+	case PlotFinished:
+		status = "Finished"
+	}
+	return []string{
+		apd.Host,
+		shortenPlotId(apd.PlotId),
+		status,
+		fmt.Sprintf("%d/4", apd.Phase),
+		fmt.Sprintf("%d%%", apd.Progress),
+		apd.StartTime.Format("2006-01-02 15:04:05"),
+		DurationString(apd.Duration),
+		apd.PlotDir,
+		apd.DestDir,
+	}
+}
+
+func (client *Client) makeActivePlotsData(host string, p *ActivePlot) *activePlotsData {
+	apd := &activePlotsData{}
+	apd.Host = host
+	apd.PlotId = p.Id
+	apd.Status = p.State
+	apd.Phase = p.getCurrentPhase()
+	apd.Progress = p.getProgress()
+	apd.StartTime = p.getPhaseTime(0)
+	apd.Duration = time.Since(apd.StartTime)
+	apd.PlotDir = p.PlotDir
+	apd.DestDir = p.TargetDir
+	return apd
+}
+
+func (client *Client) drawActivePlotsTable() {
+	activePlotsCount := 0
+	client.activeLogs = make(map[string][]string)
+
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.activePlotsTable.Keys() {
+		keysToRemove[key] = struct{}{}
+	}
+
+	for host, msg := range client.msg {
 		for _, plot := range msg.Actives {
-			state := "Unknown"
-			switch plot.State {
-			case PlotRunning:
-				state = "Running"
-			case PlotError:
-				state = "Errored"
-			case PlotFinished:
-				state = "Finished"
-			}
-
-			client.plotTable.SetCell(count+1, 0, tview.NewTableCell(host))
-			client.plotTable.SetCell(count+1, 1, tview.NewTableCell(client.shortenPlotId(plot.Id)))
-			client.plotTable.SetCell(count+1, 2, tview.NewTableCell(state))
-			client.plotTable.SetCell(count+1, 3, tview.NewTableCell(plot.Phase).SetAlign(tview.AlignRight))
-			client.plotTable.SetCell(count+1, 4, tview.NewTableCell(plot.Progress).SetAlign(tview.AlignRight))
-			client.plotTable.SetCell(count+1, 5, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-			client.plotTable.SetCell(count+1, 6, tview.NewTableCell(plot.Duration(t)))
-			client.plotTable.SetCell(count+1, 7, tview.NewTableCell(plot.PlotDir))
-			client.plotTable.SetCell(count+1, 8, tview.NewTableCell(plot.TargetDir))
-			client.activeLogs[count+1] = plot.Tail
-			count++
+			delete(keysToRemove, plot.Id)
+			client.activeLogs[plot.Id] = plot.Tail
+			client.activePlotsTable.SetRowData(plot.Id, client.makeActivePlotsData(host, plot))
+			activePlotsCount++
 		}
 	}
-	client.plotTable.SetTitle(fmt.Sprintf(" Active Plots [%d] ", count))
-	client.plotTable.ScrollToBeginning()
+
+	for key, _ := range keysToRemove {
+		client.activePlotsTable.ClearRowData(key)
+	}
+
+	client.activePlotsTable.SetTitle(fmt.Sprintf(" Active Plots [%d] ", activePlotsCount))
 }
 
-func (client *Client) drawArchivedPlots() {
-	client.lastTable.Clear()
-	client.lastTable.SetCell(0, 0, tview.NewTableCell("Host"))
-	client.lastTable.SetCell(0, 1, tview.NewTableCell("Plot Id"))
-	client.lastTable.SetCell(0, 2, tview.NewTableCell("Status"))
-	client.lastTable.SetCell(0, 3, tview.NewTableCell("Phase"))
-	client.lastTable.SetCell(0, 4, tview.NewTableCell("Start Time"))
-	client.lastTable.SetCell(0, 5, tview.NewTableCell("End Time"))
-	client.lastTable.SetCell(0, 6, tview.NewTableCell("Duration"))
-	client.lastTable.SetCell(0, 7, tview.NewTableCell("Plot Dir"))
-	client.lastTable.SetCell(0, 8, tview.NewTableCell("Dest Dir"))
+func (client *Client) selectActivePlot(key string) {
+	client.logPlotId = key
+	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
+	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
+	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
+	if log, found := client.activeLogs[key]; found {
+		client.logTextbox.SetText(strings.Join(log, ""))
+		client.logTextbox.ScrollToEnd()
+	} else {
+		client.logTextbox.SetText("")
+	}
+}
 
-	count := 0
-	client.archivedLogs = map[int][]string{}
-	for _, host := range client.hosts {
-		msg, found := client.msg[host]
-		if !found {
-			continue
+// Plot directories
+
+type plotDirData struct {
+	Host           string        `header:"Host"`
+	PlotDir        string        `header:"Directory"`
+	AvailableBytes uint64        `header:"Available Space" data-align:"right"`
+	AvgPhase1      time.Duration `header:"Avg Phase 1" data-align:"right"`
+	AvgPhase2      time.Duration `header:"Avg Phase 2" data-align:"right"`
+	AvgPhase3      time.Duration `header:"Avg Phase 3" data-align:"right"`
+	AvgPhase4      time.Duration `header:"Avg Phase 4" data-align:"right"`
+	Count          int           `header:"Count" data-align:"right"`
+	Failed         int           `header:"Failed" data-align:"right"`
+}
+
+func (pdd *plotDirData) Strings() []string {
+	return []string{
+		pdd.Host,
+		pdd.PlotDir,
+		SpaceString(pdd.AvailableBytes),
+		DurationString(pdd.AvgPhase1),
+		DurationString(pdd.AvgPhase2),
+		DurationString(pdd.AvgPhase3),
+		DurationString(pdd.AvgPhase4),
+		fmt.Sprintf("%d", pdd.Count),
+		fmt.Sprintf("%d", pdd.Failed),
+	}
+}
+
+func (client *Client) makePlotDirsData() map[string]*plotDirData {
+	plotDirs := make(map[string]*plotDirData)
+
+	for host, msg := range client.msg {
+		for plotDir, plotSpace := range msg.TempDirs {
+			plotDirs[host+"||"+plotDir] = &plotDirData{
+				Host:           host,
+				PlotDir:        plotDir,
+				AvailableBytes: plotSpace,
+			}
 		}
+
 		for _, plot := range msg.Archived {
-			state := "Unknown"
-			switch plot.State {
-			case PlotRunning:
-				state = "Running"
-			case PlotError:
-				state = "Errored"
-			case PlotFinished:
-				state = "Finished"
+			pdd, ok := plotDirs[host+"||"+plot.PlotDir]
+			if !ok {
+				// There's data from a completed plot, but we're no longer using it
+				pdd = &plotDirData{
+					Host:           host,
+					PlotDir:        plot.PlotDir,
+					AvailableBytes: math.MaxUint64,
+				}
+				plotDirs[host+"||"+plot.PlotDir] = pdd
 			}
-
-			client.lastTable.SetCell(count+1, 0, tview.NewTableCell(host))
-			client.lastTable.SetCell(count+1, 1, tview.NewTableCell(client.shortenPlotId(plot.Id)))
-			client.lastTable.SetCell(count+1, 2, tview.NewTableCell(state))
-			client.lastTable.SetCell(count+1, 3, tview.NewTableCell(plot.Phase))
-			client.lastTable.SetCell(count+1, 4, tview.NewTableCell(plot.StartTime.Format("2006-01-02 15:04:05")))
-			client.lastTable.SetCell(count+1, 5, tview.NewTableCell(plot.EndTime.Format("2006-01-02 15:04:05")))
-			client.lastTable.SetCell(count+1, 6, tview.NewTableCell(plot.Duration(plot.EndTime)))
-			client.lastTable.SetCell(count+1, 7, tview.NewTableCell(plot.PlotDir))
-			client.lastTable.SetCell(count+1, 8, tview.NewTableCell(plot.TargetDir))
-			client.archivedLogs[count+1] = plot.Tail
-			count++
+			switch plot.State {
+			case PlotFinished:
+				pdd.AvgPhase1 += plot.getPhaseTime(1).Sub(plot.getPhaseTime(0))
+				pdd.AvgPhase2 += plot.getPhaseTime(2).Sub(plot.getPhaseTime(1))
+				pdd.AvgPhase3 += plot.getPhaseTime(3).Sub(plot.getPhaseTime(2))
+				pdd.AvgPhase4 += plot.getPhaseTime(4).Sub(plot.getPhaseTime(3))
+				pdd.Count++
+			case PlotError, PlotKilled:
+				pdd.Failed++
+			}
 		}
 	}
-	client.lastTable.SetTitle(fmt.Sprintf(" Archived Plots [%d] ", count))
-	client.lastTable.ScrollToBeginning()
+
+	for _, pdd := range plotDirs {
+		if pdd.Count > 0 {
+			pdd.AvgPhase1 /= time.Duration(pdd.Count)
+			pdd.AvgPhase2 /= time.Duration(pdd.Count)
+			pdd.AvgPhase3 /= time.Duration(pdd.Count)
+			pdd.AvgPhase4 /= time.Duration(pdd.Count)
+		}
+	}
+	return plotDirs
 }
 
-func (client *Client) selectActivePlot(row int, column int) {
-	s := ""
-	if log, found := client.activeLogs[row]; found {
-		for _, line := range log {
-			s += line
-		}
+func (client *Client) drawPlotDirsTable() {
+	plotDirs := client.makePlotDirsData()
+
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.plotDirsTable.Keys() {
+		keysToRemove[key] = struct{}{}
 	}
-	client.logTextbox.SetText(s)
+
+	for key, pdd := range plotDirs {
+		delete(keysToRemove, key)
+		client.plotDirsTable.SetRowData(key, pdd)
+	}
+
+	for key, _ := range keysToRemove {
+		client.plotDirsTable.ClearRowData(key)
+	}
+
+	client.plotDirsTable.SetTitle(fmt.Sprintf(" Plot Directories [%d] ", len(plotDirs)))
 }
 
-func (client *Client) selectArchivedPlot(row int, column int) {
-	s := ""
-	if log, found := client.archivedLogs[row]; found {
-		for _, line := range log {
-			s += line
-		}
-	}
-	client.logTextbox.SetText(s)
+// Dest Directories
+
+type destDirData struct {
+	Host           string        `header:"Host"`
+	DestDir        string        `header:"Directory"`
+	AvailableBytes uint64        `header:"Available Space" data-align:"right"`
+	AvgPlotTime    time.Duration `header:"Avg Plot Time" data-align:"right"`
+	Count          int           `header:"Count" data-align:"right"`
+	Failed         int           `header:"Failed" data-align:"right"`
 }
 
-func (client *Client) computeAvgTargetTime(host, path string) string {
-	msg, found := client.msg[host]
-	if !found {
-		return ""
+func (ddd *destDirData) Strings() []string {
+	return []string{
+		ddd.Host,
+		ddd.DestDir,
+		SpaceString(ddd.AvailableBytes),
+		DurationString(ddd.AvgPlotTime),
+		fmt.Sprintf("%d", ddd.Count),
+		fmt.Sprintf("%d", ddd.Failed),
 	}
-	var count int64
-	var total int64
-	for _, plot := range msg.Archived {
-		if plot.TargetDir != path || plot.State != PlotFinished {
-			continue
+}
+
+func (client *Client) makeDestDirsData() map[string]*destDirData {
+	destDirs := make(map[string]*destDirData)
+
+	for host, msg := range client.msg {
+		for destDir, plotSpace := range msg.TargetDirs {
+			destDirs[host+"||"+destDir] = &destDirData{
+				Host:           host,
+				DestDir:        destDir,
+				AvailableBytes: plotSpace,
+			}
 		}
-		count++
-		total = total + int64(plot.EndTime.Sub(plot.StartTime))
+
+		for _, plot := range msg.Archived {
+			ddd, ok := destDirs[host+"||"+plot.TargetDir]
+			if !ok {
+				// There's data from a completed plot, but we're no longer using it
+				ddd = &destDirData{
+					Host:           host,
+					DestDir:        plot.TargetDir,
+					AvailableBytes: math.MaxUint64,
+				}
+				destDirs[host+"||"+plot.TargetDir] = ddd
+			}
+			switch plot.State {
+			case PlotFinished:
+				ddd.AvgPlotTime += plot.getPhaseTime(4).Sub(plot.getPhaseTime(0))
+				ddd.Count++
+			case PlotError, PlotKilled:
+				ddd.Failed++
+			}
+		}
 	}
-	if count == 0 {
-		return ""
+
+	for _, ddd := range destDirs {
+		if ddd.Count > 0 {
+			ddd.AvgPlotTime /= time.Duration(ddd.Count)
+		}
+	}
+	return destDirs
+}
+
+func (client *Client) drawDestDirsTable() {
+	destDirs := client.makeDestDirsData()
+
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.destDirsTable.Keys() {
+		keysToRemove[key] = struct{}{}
+	}
+
+	for key, ddd := range destDirs {
+		delete(keysToRemove, key)
+		client.destDirsTable.SetRowData(key, ddd)
+	}
+
+	for key, _ := range keysToRemove {
+		client.destDirsTable.ClearRowData(key)
+	}
+
+	client.destDirsTable.SetTitle(fmt.Sprintf(" Dest Directories [%d] ", len(destDirs)))
+}
+
+// Archived plots
+
+type archivedPlotData struct {
+	Host      string        `header:"Host"`
+	PlotId    string        `header:"Plot Id"`
+	Status    int           `header:"Status"`
+	Phase     int           `header:"Phase" data-align:"right"`
+	StartTime time.Time     `header:"Start Time"`
+	EndTime   time.Time     `header:"End Time"`
+	Duration  time.Duration `header:"Duration"`
+	PlotDir   string        `header:"Plot Dir"`
+	DestDir   string        `header:"Dest Dir"`
+}
+
+func (apd *archivedPlotData) Strings() []string {
+	status := "Unknown"
+	switch apd.Status {
+	case PlotRunning:
+		status = "Running"
+	case PlotError:
+		status = "Errored"
+	case PlotFinished:
+		status = "Finished"
+	}
+	return []string{
+		apd.Host,
+		shortenPlotId(apd.PlotId),
+		status,
+		fmt.Sprintf("%d/4", apd.Phase),
+		apd.StartTime.Format("2006-01-02 15:04:05"),
+		apd.EndTime.Format("2006-01-02 15:04:05"),
+		DurationString(apd.Duration),
+		apd.PlotDir,
+		apd.DestDir,
+	}
+}
+
+func (client *Client) makeArchivedPlotData(host string, p *ActivePlot) *archivedPlotData {
+	apd := &archivedPlotData{}
+	apd.Host = host
+	apd.PlotId = p.Id
+	apd.Status = p.State
+	apd.Phase = p.getCurrentPhase()
+	apd.StartTime = p.getPhaseTime(0)
+	apd.EndTime = p.getPhaseTime(4)
+	apd.Duration = apd.EndTime.Sub(apd.StartTime)
+	apd.PlotDir = p.PlotDir
+	apd.DestDir = p.TargetDir
+	return apd
+}
+
+func (client *Client) drawArchivedPlotsTable() {
+	archivedPlotsSuccess := 0
+	archivedPlotsFailed := 0
+	client.archivedLogs = make(map[string][]string)
+
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.archivedPlotsTable.Keys() {
+		keysToRemove[key] = struct{}{}
+	}
+
+	for host, msg := range client.msg {
+		for _, plot := range msg.Archived {
+			delete(keysToRemove, plot.Id)
+			client.archivedLogs[plot.Id] = plot.Tail
+			client.archivedPlotsTable.SetRowData(plot.Id, client.makeArchivedPlotData(host, plot))
+			switch plot.State {
+			case PlotFinished:
+				archivedPlotsSuccess++
+			case PlotKilled:
+				archivedPlotsFailed++
+			case PlotError:
+				archivedPlotsFailed++
+			}
+		}
+	}
+
+	for key, _ := range keysToRemove {
+		client.archivedPlotsTable.ClearRowData(key)
+	}
+
+	if archivedPlotsFailed > 0 {
+		client.archivedPlotsTable.SetTitle(fmt.Sprintf(" Archived Plots [%d (%d failed)] ", archivedPlotsSuccess, archivedPlotsFailed))
 	} else {
-		return DurationString(time.Duration(total / count))
+		client.archivedPlotsTable.SetTitle(fmt.Sprintf(" Archived Plots [%d] ", archivedPlotsSuccess))
 	}
 }
 
-func (client *Client) AvgPhase1(host, path string) string {
-	msg, found := client.msg[host]
-	if !found {
-		return ""
-	}
-	var count int64
-	var total int64
-	for _, plot := range msg.Archived {
-		if plot.PlotDir != path || plot.Phase1Time.IsZero() || plot.State != PlotFinished {
-			continue
-		}
-		count++
-		total = total + int64(plot.Phase1Time.Sub(plot.StartTime))
-	}
-	if count == 0 {
-		return ""
+func (client *Client) selectArchivedPlot(key string) {
+	client.logPlotId = key
+	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
+	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
+	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
+	if log, found := client.archivedLogs[key]; found {
+		client.logTextbox.SetText(strings.Join(log, ""))
+		client.logTextbox.ScrollToEnd()
 	} else {
-		return DurationString(time.Duration(total / count))
-	}
-}
-
-func (client *Client) AvgPhase2(host, path string) string {
-	msg, found := client.msg[host]
-	if !found {
-		return ""
-	}
-	var count int64
-	var total int64
-	for _, plot := range msg.Archived {
-		if plot.PlotDir != path || plot.Phase1Time.IsZero() || plot.Phase2Time.IsZero() || plot.State != PlotFinished {
-			continue
-		}
-		count++
-		total = total + int64(plot.Phase2Time.Sub(plot.Phase1Time))
-	}
-	if count == 0 {
-		return ""
-	} else {
-		return DurationString(time.Duration(total / count))
-	}
-}
-
-func (client *Client) AvgPhase3(host, path string) string {
-	msg, found := client.msg[host]
-	if !found {
-		return ""
-	}
-	var count int64
-	var total int64
-	for _, plot := range msg.Archived {
-		if plot.PlotDir != path || plot.Phase2Time.IsZero() || plot.Phase3Time.IsZero() || plot.State != PlotFinished {
-			continue
-		}
-		count++
-		total = total + int64(plot.Phase3Time.Sub(plot.Phase2Time))
-	}
-	if count == 0 {
-		return ""
-	} else {
-		return DurationString(time.Duration(total / count))
-	}
-}
-
-func (client *Client) AvgPhase4(host, path string) string {
-	msg, found := client.msg[host]
-	if !found {
-		return ""
-	}
-	var count int64
-	var total int64
-	for _, plot := range msg.Archived {
-		if plot.PlotDir != path || plot.Phase3Time.IsZero() || plot.State != PlotFinished {
-			continue
-		}
-		count++
-		total = total + int64(plot.EndTime.Sub(plot.Phase3Time))
-	}
-	if count == 0 {
-		return ""
-	} else {
-		return DurationString(time.Duration(total / count))
+		client.logTextbox.SetText("")
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +18,7 @@ import (
 const KB = uint64(1024)
 const MB = KB * KB
 const GB = KB * KB * KB
+const TB = KB * KB * KB * KB
 const PLOT_SIZE = 105 * GB
 
 const (
@@ -50,7 +53,54 @@ type ActivePlot struct {
 	Pid              int
 	UseTargetForTmp2 bool
 	BucketSize       int
+	SavePlotLogDir   string
 	process          *os.Process
+}
+
+// getPhaseTime returns the end time of a phase. phase 0 is the start time
+// of the entire plot, and phase 4 is the end time of the entire plot.
+// TODO: We can change the ActivePlot structure to be PhaseTime [5]time.Time,
+//       but that's a protocol change.
+func (ap *ActivePlot) getPhaseTime(phase int) time.Time {
+	switch phase {
+	case 0:
+		return ap.StartTime
+	case 1:
+		return ap.Phase1Time
+	case 2:
+		return ap.Phase2Time
+	case 3:
+		return ap.Phase3Time
+	case 4:
+		return ap.EndTime
+	default:
+		panic("request for invalid phase time")
+	}
+}
+
+// getCurrentPhase returns the current phase, or a negative number to indicate an error.
+// TODO: We can also change this to be part of the structure, but that's also a protocol change.
+func (ap *ActivePlot) getCurrentPhase() int {
+	parts := strings.Split(ap.Phase, "/")
+	if len(parts) != 2 {
+		return -1
+	} else if i, err := strconv.Atoi(parts[0]); err != nil {
+		return -2
+	} else {
+		return i
+	}
+}
+
+// getProgress returns the current progress, or a negative number to indicate an error
+// TODO: We can also change this to be part of the structure, but that's also a protocol change.
+func (ap *ActivePlot) getProgress() int {
+	if len(ap.Progress) == 0 {
+		return -1
+	} else if i, err := strconv.Atoi(ap.Progress[:len(ap.Progress)-1]); err != nil {
+		return -2
+	} else {
+		return i
+	}
 }
 
 func (ap *ActivePlot) Duration(currentTime time.Time) string {
@@ -155,6 +205,7 @@ func (ap *ActivePlot) RunPlot() {
 
 func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 	reader := bufio.NewReader(in)
+	var logFile *os.File
 	for {
 		if s, err := reader.ReadString('\n'); err != nil {
 			break
@@ -172,6 +223,16 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 			}
 			if strings.HasPrefix(s, "ID: ") {
 				ap.Id = strings.TrimSuffix(s[4:], "\n")
+				if len(ap.SavePlotLogDir) > 0 {
+					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
+					logFile, err = os.Create(logFilePath)
+					if err != nil {
+						break
+					}
+					for _, l := range ap.Tail {
+						logFile.Write([]byte(l))
+					}
+				}
 			}
 			for phaseStr, progress := range progressTable {
 				if strings.Index(s, phaseStr) >= 0 {
@@ -180,6 +241,9 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 				}
 			}
 			ap.lock.Lock()
+			if logFile != nil {
+				logFile.Write([]byte(s))
+			}
 			ap.Tail = append(ap.Tail, s)
 			if len(ap.Tail) > 20 {
 				ap.Tail = ap.Tail[len(ap.Tail)-20:]

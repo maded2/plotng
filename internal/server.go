@@ -100,6 +100,7 @@ func (server *Server) createNewPlot(config *Config) {
 		}
 
 		if config.MaxActivePlotPerPhase1 <= sum {
+			log.Printf("Skipping, Too many active plots in Phase 1: %d", sum)
 			return
 		}
 	}
@@ -141,6 +142,7 @@ func (server *Server) createNewPlot(config *Config) {
 		DisableBitField:  config.DisableBitField,
 		UseTargetForTmp2: config.UseTargetForTmp2,
 		BucketSize:       config.BucketSize,
+		SavePlotLogDir:   config.SavePlotLogDir,
 		Phase:            "NA",
 		Tail:             nil,
 		State:            PlotRunning,
