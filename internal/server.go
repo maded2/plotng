@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"github.com/ricochet2200/go-disk-usage/du"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ricochet2200/go-disk-usage/du"
 )
 
 type Server struct {
@@ -139,6 +140,7 @@ func (server *Server) createNewPlot(config *Config) {
 		PoolPublicKey:    config.PoolPublicKey,
 		Threads:          config.Threads,
 		Buffers:          config.Buffers,
+		PlotSize:         config.PlotSize,
 		DisableBitField:  config.DisableBitField,
 		UseTargetForTmp2: config.UseTargetForTmp2,
 		BucketSize:       config.BucketSize,
