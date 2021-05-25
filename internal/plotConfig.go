@@ -15,7 +15,6 @@ type Config struct {
 	Fingerprint            string
 	FarmerPublicKey        string
 	PoolPublicKey          string
-	AllowNewPlot           bool
 	Threads                int
 	PlotSize               int
 	Buffers                int
