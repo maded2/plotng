@@ -174,6 +174,9 @@ func (ap *ActivePlot) RunPlot() {
 		case 35:
 			args = append(args, fmt.Sprintf("-b%d", 29600))
 			break
+		default:
+			break
+
 		}
 	}
 
