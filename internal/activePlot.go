@@ -38,6 +38,7 @@ type ActivePlot struct {
 	FarmerPublicKey string
 	PoolPublicKey   string
 	Threads         int
+	PlotSize        int
 	Buffers         int
 	DisableBitField bool
 
@@ -134,7 +135,8 @@ func (ap *ActivePlot) RunPlot() {
 		ap.EndTime = time.Now()
 	}()
 	args := []string{
-		"plots", "create", "-k32", "-n1",
+		"plots", "create",
+		"-n1",
 		"-t" + ap.PlotDir,
 		"-d" + ap.TargetDir,
 	}
@@ -146,6 +148,11 @@ func (ap *ActivePlot) RunPlot() {
 	}
 	if len(ap.PoolPublicKey) > 0 {
 		args = append(args, "-p"+ap.PoolPublicKey)
+	}
+	if ap.PlotSize == 32 {
+		args = append(args, "-k32")
+	} else {
+		args = append(args, fmt.Sprintf("-k%d", ap.PlotSize))
 	}
 	if ap.Threads > 0 {
 		args = append(args, fmt.Sprintf("-r%d", ap.Threads))

@@ -16,6 +16,7 @@ type Config struct {
 	FarmerPublicKey        string
 	PoolPublicKey          string
 	Threads                int
+	PlotSize               int
 	Buffers                int
 	DisableBitField        bool
 	StaggeringDelay        int
