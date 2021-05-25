@@ -149,16 +149,31 @@ func (ap *ActivePlot) RunPlot() {
 	if len(ap.PoolPublicKey) > 0 {
 		args = append(args, "-p"+ap.PoolPublicKey)
 	}
+	if ap.Threads > 0 {
+		args = append(args, fmt.Sprintf("-r%d", ap.Threads))
+	}
 	if ap.PlotSize == 32 {
 		args = append(args, "-k32")
 	} else {
 		args = append(args, fmt.Sprintf("-k%d", ap.PlotSize))
 	}
-	if ap.Threads > 0 {
-		args = append(args, fmt.Sprintf("-r%d", ap.Threads))
-	}
 	if ap.Buffers > 0 {
 		args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
+	} else {
+		switch ap.PlotSize {
+		case 32:
+			args = append(args, fmt.Sprintf("-b%d", 3390))
+			break
+		case 33:
+			args = append(args, fmt.Sprintf("-b%d", 7400))
+			break
+		case 34:
+			args = append(args, fmt.Sprintf("-b%d", 14800))
+			break
+		case 35:
+			args = append(args, fmt.Sprintf("-b%d", 29600))
+			break
+		}
 	}
 	if ap.DisableBitField {
 		args = append(args, "-e")
