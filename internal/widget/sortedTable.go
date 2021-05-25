@@ -255,7 +255,7 @@ func (st *SortedTable) redrawHeaders() {
 }
 
 func (st *SortedTable) GetSelection() string {
-	if st.curRow > 0 {
+	if st.curRow > 0 && st.curRow <= len(st.values) {
 		return st.values[st.curRow-1].key
 	}
 	return ""
