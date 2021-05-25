@@ -174,6 +174,7 @@ func (ap *ActivePlot) RunPlot() {
 			args = append(args, fmt.Sprintf("-b%d", 29600))
 			break
 		}
+
 	}
 	if ap.DisableBitField {
 		args = append(args, "-e")

@@ -2,6 +2,7 @@
   "Fingerprint": "",
   "FarmerPublicKey": "",
   "PoolPublicKey": "",
+  "AllowNewPlot":true,
   "Threads": 0,
   "Buffers": 0,
   "PlotSize": 32,

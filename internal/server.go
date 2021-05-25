@@ -50,7 +50,12 @@ func (server *Server) createPlot(t time.Time) {
 	if server.config.CurrentConfig != nil {
 		server.config.Lock.RLock()
 		if len(server.active) < server.config.CurrentConfig.NumberOfParallelPlots {
-			server.createNewPlot(server.config.CurrentConfig)
+			if server.config.CurrentConfig.AllowNewPlot {
+				server.createNewPlot(server.config.CurrentConfig)
+			} else {
+				fmt.Printf("%s, Server not allow to create new plot.", t.Format("2006-01-02 15:04:05"))
+				fmt.Println(" ")
+			}
 		}
 		server.config.Lock.RUnlock()
 	}
