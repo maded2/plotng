@@ -152,11 +152,12 @@ func (ap *ActivePlot) RunPlot() {
 	if ap.Threads > 0 {
 		args = append(args, fmt.Sprintf("-r%d", ap.Threads))
 	}
-	if ap.PlotSize == 32 {
-		args = append(args, "-k32")
-	} else {
+	if ap.PlotSize > 0 {
 		args = append(args, fmt.Sprintf("-k%d", ap.PlotSize))
+	} else {
+		args = append(args, "-k32")
 	}
+
 	if ap.Buffers > 0 {
 		args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
 	} else {
@@ -174,8 +175,8 @@ func (ap *ActivePlot) RunPlot() {
 			args = append(args, fmt.Sprintf("-b%d", 29600))
 			break
 		}
-
 	}
+
 	if ap.DisableBitField {
 		args = append(args, "-e")
 	}
