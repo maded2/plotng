@@ -279,6 +279,9 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 			ap.lock.Unlock()
 		}
 	}
+	if logFile != nil {
+		logFile.Close()
+	}
 	return
 }
 
