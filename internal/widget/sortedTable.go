@@ -10,13 +10,13 @@ import (
 	"github.com/rivo/tview"
 )
 
-type SortableRow interface {
+type sortableRow interface {
 	Strings() []string
 }
 
 type tableRow struct {
 	key  string
-	data SortableRow
+	data sortableRow
 }
 
 // SortedTable is a wrapper around tview.Table which provides sortable column headers.  Rows are
@@ -199,7 +199,7 @@ func (st *SortedTable) Keys() []string {
 	return keys
 }
 
-func (st *SortedTable) SetRowData(key string, data SortableRow) *SortedTable {
+func (st *SortedTable) SetRowData(key string, data sortableRow) *SortedTable {
 	found := false
 	for idx, dr := range st.values {
 		if dr.key == key {
