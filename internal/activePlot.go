@@ -254,10 +254,11 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
 					logFile, err = os.Create(logFilePath)
 					if err != nil {
-						break
-					}
-					for _, l := range ap.Tail {
-						logFile.Write([]byte(l))
+						fmt.Sprintf("Failed to create log file [%s]: %s", logFilePath, err)
+					} else {
+						for _, l := range ap.Tail {
+							logFile.Write([]byte(l))
+						}
 					}
 				}
 			}
