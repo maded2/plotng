@@ -66,7 +66,7 @@ eg. plotng -ui -host plotter1:8484,plotter2,plotter3:8485
         "UseTargetForTmp2": false,
         "BucketSize": 0,
         "SavePlotLogDir": "",
-        "PlotSize: 32,
+        "PlotSize": 32
     }
 
 Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
