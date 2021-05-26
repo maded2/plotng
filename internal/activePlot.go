@@ -210,8 +210,6 @@ func (ap *activePlot) RunPlot() {
 	}
 	go ap.processLogs(stdout)
 
-	//log.Println(cmd.String())
-
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to start chia command: %s", err)
 		ap.State = plotError
