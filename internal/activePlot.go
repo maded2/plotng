@@ -216,21 +216,21 @@ func (ap *activePlot) RunPlot() {
 		log.Printf("Failed to start chia command: %s", err)
 		ap.State = plotError
 		return
-	} else {
-		ap.process = cmd.Process
-		ap.Pid = cmd.Process.Pid
-		if err := cmd.Wait(); err != nil {
-			if ap.State != PlotKilled {
-				ap.State = PlotError
-				log.Printf("Plotting Exit with Error: %s", err)
-			} else {
-				log.Printf("Plot [%s] Killed", ap.Id)
-			}
-			ap.cleanup()
-			return
-		}
 	}
-	ap.State = PlotFinished
+
+	ap.process = cmd.Process
+	ap.Pid = cmd.Process.Pid
+	if err := cmd.Wait(); err != nil {
+		if ap.State != plotKilled {
+			ap.State = plotError
+			log.Printf("Plotting Exit with Error: %s", err)
+		} else {
+			log.Printf("Plot [%s] Killed", ap.ID)
+		}
+		ap.cleanup()
+		return
+	}
+	ap.State = plotFinished
 	return
 }
 
