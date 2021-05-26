@@ -15,21 +15,23 @@ import (
 	"time"
 )
 
-const KB = uint64(1024)
-const MB = KB * KB
-const GB = KB * KB * KB
-const TB = KB * KB * KB * KB
-const PLOT_SIZE = 105 * GB
-
 const (
-	PlotRunning = iota
-	PlotError
-	PlotFinished
-	PlotKilled
+	kb       = uint64(1024)
+	mb       = kb * kb
+	gb       = kb * kb * kb
+	tb       = kb * kb * kb * kb
+	plotSize = 105 * gb
 )
 
-type ActivePlot struct {
-	PlotId          int64
+const (
+	plotRunning = iota
+	plotError
+	plotFinished
+	plotKilled
+)
+
+type activePlot struct {
+	PlotID          int64
 	StartTime       time.Time
 	EndTime         time.Time
 	TargetDir       string
@@ -46,7 +48,7 @@ type ActivePlot struct {
 	Tail             []string
 	State            int
 	lock             sync.RWMutex
-	Id               string
+	ID               string
 	Progress         string
 	Phase1Time       time.Time
 	Phase2Time       time.Time
@@ -62,7 +64,7 @@ type ActivePlot struct {
 // of the entire plot, and phase 4 is the end time of the entire plot.
 // TODO: We can change the ActivePlot structure to be PhaseTime [5]time.Time,
 //       but that's a protocol change.
-func (ap *ActivePlot) getPhaseTime(phase int) time.Time {
+func (ap *activePlot) getPhaseTime(phase int) time.Time {
 	switch phase {
 	case 0:
 		return ap.StartTime
@@ -81,7 +83,7 @@ func (ap *ActivePlot) getPhaseTime(phase int) time.Time {
 
 // getCurrentPhase returns the current phase, or a negative number to indicate an error.
 // TODO: We can also change this to be part of the structure, but that's also a protocol change.
-func (ap *ActivePlot) getCurrentPhase() int {
+func (ap *activePlot) getCurrentPhase() int {
 	parts := strings.Split(ap.Phase, "/")
 	if len(parts) != 2 {
 		return -1
@@ -94,7 +96,7 @@ func (ap *ActivePlot) getCurrentPhase() int {
 
 // getProgress returns the current progress, or a negative number to indicate an error
 // TODO: We can also change this to be part of the structure, but that's also a protocol change.
-func (ap *ActivePlot) getProgress() int {
+func (ap *activePlot) getProgress() int {
 	if len(ap.Progress) == 0 {
 		return -1
 	} else if i, err := strconv.Atoi(ap.Progress[:len(ap.Progress)-1]); err != nil {
@@ -104,22 +106,22 @@ func (ap *ActivePlot) getProgress() int {
 	}
 }
 
-func (ap *ActivePlot) Duration(currentTime time.Time) string {
-	return DurationString(currentTime.Sub(ap.StartTime))
+func (ap *activePlot) Duration(currentTime time.Time) string {
+	return durationString(currentTime.Sub(ap.StartTime))
 }
 
-func (ap *ActivePlot) String(showLog bool) string {
+func (ap *activePlot) String(showLog bool) string {
 	ap.lock.RLock()
 	state := "Unknown"
 	switch ap.State {
-	case PlotRunning:
+	case plotRunning:
 		state = "Running"
-	case PlotError:
+	case plotError:
 		state = "Errored"
-	case PlotFinished:
+	case plotFinished:
 		state = "Finished"
 	}
-	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.Id, state, ap.Phase, ap.Progress, ap.StartTime.Format("2006-01-02 15:04:05"), ap.Duration(time.Now()), ap.PlotDir, ap.TargetDir)
+	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.ID, state, ap.Phase, ap.Progress, ap.StartTime.Format("2006-01-02 15:04:05"), ap.Duration(time.Now()), ap.PlotDir, ap.TargetDir)
 	if showLog {
 		for _, l := range ap.Tail {
 			s += fmt.Sprintf("\t%s", l)
@@ -129,7 +131,7 @@ func (ap *ActivePlot) String(showLog bool) string {
 	return s
 }
 
-func (ap *ActivePlot) RunPlot() {
+func (ap *activePlot) RunPlot() {
 	ap.StartTime = time.Now()
 	defer func() {
 		ap.EndTime = time.Now()
@@ -191,26 +193,28 @@ func (ap *ActivePlot) RunPlot() {
 	}
 
 	cmd := exec.Command("chia", args...)
-	ap.State = PlotRunning
-	if stderr, err := cmd.StderrPipe(); err != nil {
-		ap.State = PlotError
+	ap.State = plotRunning
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		ap.State = plotError
 		log.Printf("Failed to start Plotting: %s", err)
 		return
-	} else {
-		go ap.processLogs(stderr)
 	}
-	if stdout, err := cmd.StdoutPipe(); err != nil {
-		ap.State = PlotError
+	go ap.processLogs(stderr)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		ap.State = plotError
 		log.Printf("Failed to start Plotting: %s", err)
 		return
-	} else {
-		go ap.processLogs(stdout)
 	}
+	go ap.processLogs(stdout)
+
 	//log.Println(cmd.String())
 
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to start chia command: %s", err)
-		ap.State = PlotError
+		ap.State = plotError
 		return
 	} else {
 		ap.process = cmd.Process
@@ -230,7 +234,7 @@ func (ap *ActivePlot) RunPlot() {
 	return
 }
 
-func (ap *ActivePlot) processLogs(in io.ReadCloser) {
+func (ap *activePlot) processLogs(in io.ReadCloser) {
 	reader := bufio.NewReader(in)
 	var logFile *os.File
 	for {
@@ -249,9 +253,9 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 				}
 			}
 			if strings.HasPrefix(s, "ID: ") {
-				ap.Id = strings.TrimSuffix(s[4:], "\n")
+				ap.ID = strings.TrimSuffix(s[4:], "\n")
 				if len(ap.SavePlotLogDir) > 0 {
-					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
+					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.ID))
 					logFile, err = os.Create(logFilePath)
 					if err != nil {
 						log.Printf("Failed to create log file [%s]: %s", logFilePath, err)
@@ -285,13 +289,13 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 	return
 }
 
-func (ap *ActivePlot) cleanup() {
-	if len(ap.Id) == 0 {
+func (ap *activePlot) cleanup() {
+	if len(ap.ID) == 0 {
 		return
 	}
 	if fileList, err := ioutil.ReadDir(ap.PlotDir); err == nil {
 		for _, file := range fileList {
-			if strings.Index(file.Name(), ap.Id) >= 0 && strings.HasSuffix(file.Name(), ".tmp") {
+			if strings.Index(file.Name(), ap.ID) >= 0 && strings.HasSuffix(file.Name(), ".tmp") {
 				fullPath := fmt.Sprintf("%s%c%s", ap.PlotDir, os.PathSeparator, file.Name())
 
 				if err := os.Remove(fullPath); err == nil {

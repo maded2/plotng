@@ -15,8 +15,8 @@ import (
 
 type Server struct {
 	config               *PlotConfig
-	active               map[int64]*ActivePlot
-	archive              []*ActivePlot
+	active               map[int64]*activePlot
+	archive              []*activePlot
 	currentTemp          int
 	currentTarget        int
 	targetDelayStartTime time.Time
@@ -25,7 +25,7 @@ type Server struct {
 
 func (server *Server) ProcessLoop(configPath string, port int) {
 	gob.Register(Msg{})
-	gob.Register(ActivePlot{})
+	gob.Register(activePlot{})
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), server); err != nil {
 			log.Fatalf("Failed to start webserver: %s", err)
@@ -35,7 +35,7 @@ func (server *Server) ProcessLoop(configPath string, port int) {
 	server.config = &PlotConfig{
 		ConfigPath: configPath,
 	}
-	server.active = map[int64]*ActivePlot{}
+	server.active = map[int64]*activePlot{}
 	server.createPlot(time.Now())
 	ticker := time.NewTicker(time.Minute)
 	for t := range ticker.C {
@@ -54,15 +54,15 @@ func (server *Server) createPlot(t time.Time) {
 		}
 		server.config.Lock.RUnlock()
 	}
-	fmt.Printf("%s, %d Active Plots\n", t.Format("2006-01-02 15:04:05"), len(server.active))
+	log.Printf("%s, %d Active Plots\n", t.Format("2006-01-02 15:04:05"), len(server.active))
 	for _, plot := range server.active {
-		fmt.Print(plot.String(server.config.CurrentConfig.ShowPlotLog))
-		if plot.State == PlotFinished || plot.State == PlotError {
+		log.Print(plot.String(server.config.CurrentConfig.ShowPlotLog))
+		if plot.State == plotFinished || plot.State == plotError {
 			server.archive = append(server.archive, plot)
-			delete(server.active, plot.PlotId)
+			delete(server.active, plot.PlotID)
 		}
 	}
-	fmt.Println(" ")
+	log.Println()
 }
 
 func (server *Server) createNewPlot(config *Config) {
@@ -85,7 +85,7 @@ func (server *Server) createNewPlot(config *Config) {
 		server.currentTemp = 0
 	}
 	if config.MaxActivePlotPerPhase1 > 0 {
-		getPhase1 := func(plot *ActivePlot) bool {
+		getPhase1 := func(plot *activePlot) bool {
 			if strings.HasPrefix(plot.Phase, "1/4") {
 				return true
 			}
@@ -125,14 +125,14 @@ func (server *Server) createNewPlot(config *Config) {
 	server.targetDelayStartTime = time.Now().Add(time.Duration(config.DelaysBetweenPlot) * time.Minute)
 
 	targetDirSpace := server.getDiskSpaceAvailable(targetDir)
-	if config.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*PLOT_SIZE > targetDirSpace {
-		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/GB)
+	if config.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*plotSize > targetDirSpace {
+		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/gb)
 		return
 	}
 
 	t := time.Now()
-	plot := &ActivePlot{
-		PlotId:           t.Unix(),
+	plot := &activePlot{
+		PlotID:           t.Unix(),
 		TargetDir:        targetDir,
 		PlotDir:          plotDir,
 		Fingerprint:      config.Fingerprint,
@@ -147,9 +147,9 @@ func (server *Server) createNewPlot(config *Config) {
 		SavePlotLogDir:   config.SavePlotLogDir,
 		Phase:            "NA",
 		Tail:             nil,
-		State:            PlotRunning,
+		State:            plotRunning,
 	}
-	server.active[plot.PlotId] = plot
+	server.active[plot.PlotID] = plot
 	go plot.RunPlot()
 }
 
@@ -211,17 +211,17 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 	case "DELETE":
 		for _, v := range server.active {
-			if v.Id == req.RequestURI {
+			if v.ID == req.RequestURI {
 				v.process.Kill()
-				v.State = PlotKilled
+				v.State = plotKilled
 			}
 		}
 	}
 }
 
 type Msg struct {
-	Actives    []*ActivePlot
-	Archived   []*ActivePlot
+	Actives    []*activePlot
+	Archived   []*activePlot
 	TempDirs   map[string]uint64
 	TargetDirs map[string]uint64
 }
