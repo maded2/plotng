@@ -38,7 +38,7 @@ type plotConfig struct {
 	Lock          sync.RWMutex
 }
 
-func (pc *PlotConfig) ProcessConfig() (newConfigLoaded bool) {
+func (pc *plotConfig) ProcessConfig() (newConfigLoaded bool) {
 	fs, err := os.Lstat(pc.ConfigPath)
 	if err != nil {
 		log.Printf("Failed to open config file [%s]: %s\n", pc.ConfigPath, err)
