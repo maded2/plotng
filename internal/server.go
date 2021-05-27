@@ -15,8 +15,8 @@ import (
 
 type Server struct {
 	config               *PlotConfig
-	active               map[int64]*activePlot
-	archive              []*activePlot
+	active               map[int64]*ActivePlot
+	archive              []*ActivePlot
 	currentTemp          int
 	currentTarget        int
 	targetDelayStartTime time.Time
@@ -25,7 +25,7 @@ type Server struct {
 
 func (server *Server) ProcessLoop(configPath string, port int) {
 	gob.Register(Msg{})
-	gob.Register(activePlot{})
+	gob.Register(ActivePlot{})
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), server); err != nil {
 			log.Fatalf("Failed to start webserver: %s", err)
@@ -35,7 +35,7 @@ func (server *Server) ProcessLoop(configPath string, port int) {
 	server.config = &PlotConfig{
 		ConfigPath: configPath,
 	}
-	server.active = map[int64]*activePlot{}
+	server.active = map[int64]*ActivePlot{}
 	server.createPlot(time.Now())
 	ticker := time.NewTicker(time.Minute)
 	for t := range ticker.C {
@@ -85,7 +85,7 @@ func (server *Server) createNewPlot(config *Config) {
 		server.currentTemp = 0
 	}
 	if config.MaxActivePlotPerPhase1 > 0 {
-		getPhase1 := func(plot *activePlot) bool {
+		getPhase1 := func(plot *ActivePlot) bool {
 			if strings.HasPrefix(plot.Phase, "1/4") {
 				return true
 			}
@@ -131,7 +131,7 @@ func (server *Server) createNewPlot(config *Config) {
 	}
 
 	t := time.Now()
-	plot := &activePlot{
+	plot := &ActivePlot{
 		PlotID:           t.Unix(),
 		TargetDir:        targetDir,
 		PlotDir:          plotDir,
@@ -220,8 +220,8 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 type Msg struct {
-	Actives    []*activePlot
-	Archived   []*activePlot
+	Actives    []*ActivePlot
+	Archived   []*ActivePlot
 	TempDirs   map[string]uint64
 	TargetDirs map[string]uint64
 }

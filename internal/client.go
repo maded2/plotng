@@ -45,7 +45,7 @@ func (client *Client) ProcessLoop(hostList string) {
 	client.msg = map[string]*Msg{}
 
 	gob.Register(Msg{})
-	gob.Register(activePlot{})
+	gob.Register(ActivePlot{})
 
 	client.setupUI()
 
@@ -252,7 +252,7 @@ func (apd *activePlotsData) Strings() []string {
 	}
 }
 
-func (client *Client) makeActivePlotsData(host string, p *activePlot) *activePlotsData {
+func (client *Client) makeActivePlotsData(host string, p *ActivePlot) *activePlotsData {
 	apd := &activePlotsData{}
 	apd.Host = host
 	apd.PlotID = p.ID
@@ -519,7 +519,7 @@ func (apd *archivedPlotData) Strings() []string {
 	}
 }
 
-func (client *Client) makeArchivedPlotData(host string, p *activePlot) *archivedPlotData {
+func (client *Client) makeArchivedPlotData(host string, p *ActivePlot) *archivedPlotData {
 	apd := &archivedPlotData{}
 	apd.Host = host
 	apd.PlotID = p.ID

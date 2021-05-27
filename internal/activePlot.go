@@ -30,7 +30,7 @@ const (
 	plotKilled
 )
 
-type activePlot struct {
+type ActivePlot struct {
 	PlotID          int64
 	StartTime       time.Time
 	EndTime         time.Time
@@ -64,7 +64,7 @@ type activePlot struct {
 // of the entire plot, and phase 4 is the end time of the entire plot.
 // TODO: We can change the ActivePlot structure to be PhaseTime [5]time.Time,
 //       but that's a protocol change.
-func (ap *activePlot) getPhaseTime(phase int) time.Time {
+func (ap *ActivePlot) getPhaseTime(phase int) time.Time {
 	switch phase {
 	case 0:
 		return ap.StartTime
@@ -83,7 +83,7 @@ func (ap *activePlot) getPhaseTime(phase int) time.Time {
 
 // getCurrentPhase returns the current phase, or a negative number to indicate an error.
 // TODO: We can also change this to be part of the structure, but that's also a protocol change.
-func (ap *activePlot) getCurrentPhase() int {
+func (ap *ActivePlot) getCurrentPhase() int {
 	parts := strings.Split(ap.Phase, "/")
 	if len(parts) != 2 {
 		return -1
@@ -96,7 +96,7 @@ func (ap *activePlot) getCurrentPhase() int {
 
 // getProgress returns the current progress, or a negative number to indicate an error
 // TODO: We can also change this to be part of the structure, but that's also a protocol change.
-func (ap *activePlot) getProgress() int {
+func (ap *ActivePlot) getProgress() int {
 	if len(ap.Progress) == 0 {
 		return -1
 	} else if i, err := strconv.Atoi(ap.Progress[:len(ap.Progress)-1]); err != nil {
@@ -106,11 +106,11 @@ func (ap *activePlot) getProgress() int {
 	}
 }
 
-func (ap *activePlot) Duration(currentTime time.Time) string {
+func (ap *ActivePlot) Duration(currentTime time.Time) string {
 	return durationString(currentTime.Sub(ap.StartTime))
 }
 
-func (ap *activePlot) String(showLog bool) string {
+func (ap *ActivePlot) String(showLog bool) string {
 	ap.lock.RLock()
 	state := "Unknown"
 	switch ap.State {
@@ -131,7 +131,7 @@ func (ap *activePlot) String(showLog bool) string {
 	return s
 }
 
-func (ap *activePlot) RunPlot() {
+func (ap *ActivePlot) RunPlot() {
 	ap.StartTime = time.Now()
 	defer func() {
 		ap.EndTime = time.Now()
@@ -232,7 +232,7 @@ func (ap *activePlot) RunPlot() {
 	return
 }
 
-func (ap *activePlot) processLogs(in io.ReadCloser) {
+func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 	reader := bufio.NewReader(in)
 	var logFile *os.File
 	for {
@@ -287,7 +287,7 @@ func (ap *activePlot) processLogs(in io.ReadCloser) {
 	return
 }
 
-func (ap *activePlot) cleanup() {
+func (ap *ActivePlot) cleanup() {
 	if len(ap.ID) == 0 {
 		return
 	}
