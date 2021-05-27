@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type Config struct {
+type config struct {
 	TargetDirectory        []string
 	TempDirectory          []string
 	NumberOfParallelPlots  int
@@ -33,7 +33,7 @@ type Config struct {
 
 type PlotConfig struct {
 	ConfigPath    string
-	CurrentConfig *Config
+	CurrentConfig *config
 	LastMod       time.Time
 	Lock          sync.RWMutex
 }
@@ -54,7 +54,7 @@ func (pc *PlotConfig) ProcessConfig() (newConfigLoaded bool) {
 	}
 	defer f.Close()
 	decoder := json.NewDecoder(f)
-	var newConfig Config
+	var newConfig config
 	if err := decoder.Decode(&newConfig); err != nil {
 		log.Printf("Failed to process config file [%s], check your config file for mistake: %s\n", pc.ConfigPath, err)
 		return

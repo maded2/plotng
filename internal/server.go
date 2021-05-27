@@ -65,10 +65,10 @@ func (server *Server) createPlot(t time.Time) {
 	log.Println()
 }
 
-func (server *Server) createNewPlot(config *Config) {
+func (server *Server) createNewPlot(cfg *config) {
 	defer server.lock.Unlock()
 	server.lock.Lock()
-	if len(config.TempDirectory) == 0 || len(config.TargetDirectory) == 0 {
+	if len(cfg.TempDirectory) == 0 || len(cfg.TargetDirectory) == 0 {
 		return
 	}
 	if time.Now().Before(server.targetDelayStartTime) {
@@ -76,15 +76,15 @@ func (server *Server) createNewPlot(config *Config) {
 		return
 	}
 
-	if server.currentTarget >= len(config.TargetDirectory) {
+	if server.currentTarget >= len(cfg.TargetDirectory) {
 		server.currentTarget = 0
-		server.targetDelayStartTime = time.Now().Add(time.Duration(config.StaggeringDelay) * time.Minute)
+		server.targetDelayStartTime = time.Now().Add(time.Duration(cfg.StaggeringDelay) * time.Minute)
 		return
 	}
-	if server.currentTemp >= len(config.TempDirectory) {
+	if server.currentTemp >= len(cfg.TempDirectory) {
 		server.currentTemp = 0
 	}
-	if config.MaxActivePlotPerPhase1 > 0 {
+	if cfg.MaxActivePlotPerPhase1 > 0 {
 		getPhase1 := func(plot *ActivePlot) bool {
 			if strings.HasPrefix(plot.Phase, "1/4") {
 				return true
@@ -100,32 +100,32 @@ func (server *Server) createNewPlot(config *Config) {
 			}
 		}
 
-		if config.MaxActivePlotPerPhase1 <= sum {
+		if cfg.MaxActivePlotPerPhase1 <= sum {
 			log.Printf("Skipping, Too many active plots in Phase 1: %d", sum)
 			return
 		}
 	}
-	plotDir := config.TempDirectory[server.currentTemp]
+	plotDir := cfg.TempDirectory[server.currentTemp]
 	server.currentTemp++
-	if server.currentTemp >= len(config.TempDirectory) {
+	if server.currentTemp >= len(cfg.TempDirectory) {
 		server.currentTemp = 0
 	}
-	if config.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= config.MaxActivePlotPerTemp {
+	if cfg.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= cfg.MaxActivePlotPerTemp {
 		log.Printf("Skipping [%s], too many active plots: %d", plotDir, int(server.countActiveTemp(plotDir)))
 		return
 	}
-	targetDir := config.TargetDirectory[server.currentTarget]
+	targetDir := cfg.TargetDirectory[server.currentTarget]
 	server.currentTarget++
 
-	if config.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= config.MaxActivePlotPerTarget {
+	if cfg.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= cfg.MaxActivePlotPerTarget {
 		log.Printf("Skipping [%s], too many active plots: %d", targetDir, int(server.countActiveTarget(targetDir)))
 		return
 	}
 
-	server.targetDelayStartTime = time.Now().Add(time.Duration(config.DelaysBetweenPlot) * time.Minute)
+	server.targetDelayStartTime = time.Now().Add(time.Duration(cfg.DelaysBetweenPlot) * time.Minute)
 
 	targetDirSpace := server.getDiskSpaceAvailable(targetDir)
-	if config.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*plotSize > targetDirSpace {
+	if cfg.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*plotSize > targetDirSpace {
 		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/gb)
 		return
 	}
@@ -135,16 +135,16 @@ func (server *Server) createNewPlot(config *Config) {
 		PlotID:           t.Unix(),
 		TargetDir:        targetDir,
 		PlotDir:          plotDir,
-		Fingerprint:      config.Fingerprint,
-		FarmerPublicKey:  config.FarmerPublicKey,
-		PoolPublicKey:    config.PoolPublicKey,
-		Threads:          config.Threads,
-		Buffers:          config.Buffers,
-		PlotSize:         config.PlotSize,
-		DisableBitField:  config.DisableBitField,
-		UseTargetForTmp2: config.UseTargetForTmp2,
-		BucketSize:       config.BucketSize,
-		SavePlotLogDir:   config.SavePlotLogDir,
+		Fingerprint:      cfg.Fingerprint,
+		FarmerPublicKey:  cfg.FarmerPublicKey,
+		PoolPublicKey:    cfg.PoolPublicKey,
+		Threads:          cfg.Threads,
+		Buffers:          cfg.Buffers,
+		PlotSize:         cfg.PlotSize,
+		DisableBitField:  cfg.DisableBitField,
+		UseTargetForTmp2: cfg.UseTargetForTmp2,
+		BucketSize:       cfg.BucketSize,
+		SavePlotLogDir:   cfg.SavePlotLogDir,
 		Phase:            "NA",
 		Tail:             nil,
 		State:            plotRunning,
