@@ -31,7 +31,7 @@ type config struct {
 	SavePlotLogDir         string
 }
 
-type PlotConfig struct {
+type plotConfig struct {
 	ConfigPath    string
 	CurrentConfig *config
 	LastMod       time.Time

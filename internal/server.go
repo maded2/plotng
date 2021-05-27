@@ -14,7 +14,7 @@ import (
 )
 
 type Server struct {
-	config               *PlotConfig
+	config               *plotConfig
 	active               map[int64]*ActivePlot
 	archive              []*ActivePlot
 	currentTemp          int
@@ -32,7 +32,7 @@ func (server *Server) ProcessLoop(configPath string, port int) {
 		}
 	}()
 
-	server.config = &PlotConfig{
+	server.config = &plotConfig{
 		ConfigPath: configPath,
 	}
 	server.active = map[int64]*ActivePlot{}
