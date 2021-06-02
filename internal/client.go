@@ -27,7 +27,7 @@ type Client struct {
 	archivedTableActive bool
 	activeLogs          map[string][]string
 	archivedLogs        map[string][]string
-	logPlotID           string
+	logPlotId           string
 }
 
 var httpClient = &http.Client{
@@ -73,18 +73,18 @@ func (client *Client) getServerData(host string) (*Msg, error) {
 		return nil, err
 	}
 
-	resp, err := httpClient.Do(req)
-	if err != nil {
+	if resp, err := httpClient.Do(req); err == nil {
+		defer resp.Body.Close()
+		var msg Msg
+		decoder := gob.NewDecoder(resp.Body)
+		if err := decoder.Decode(&msg); err == nil {
+			return &msg, nil
+		} else {
+			return nil, fmt.Errorf("Failed to decode message: %w", err)
+		}
+	} else {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	var msg Msg
-	decoder := gob.NewDecoder(resp.Body)
-	err = decoder.Decode(&msg)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to decode message: %w", err)
-	}
-	return &msg, nil
 }
 
 func (client *Client) checkServer(host string) {
@@ -104,12 +104,12 @@ func (client *Client) checkServer(host string) {
 		client.drawDestDirsTable()
 		client.drawArchivedPlotsTable()
 
-		log, ok := client.activeLogs[client.logPlotID]
+		log, ok := client.activeLogs[client.logPlotId]
 		if !ok {
-			log, ok = client.archivedLogs[client.logPlotID]
+			log, ok = client.archivedLogs[client.logPlotId]
 		}
 		if ok {
-			client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotID(client.logPlotID)))
+			client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
 			client.logTextbox.SetText(strings.Join(log, ""))
 			client.logTextbox.ScrollToEnd()
 		}
@@ -208,7 +208,7 @@ func (client *Client) setupUI() {
 	client.app.EnableMouse(true)
 }
 
-func shortenPlotID(id string) string {
+func shortenPlotId(id string) string {
 	if len(id) < 20 {
 		return ""
 	}
@@ -219,7 +219,7 @@ func shortenPlotID(id string) string {
 
 type activePlotsData struct {
 	Host      string        `header:"Host"`
-	PlotID    string        `header:"Plot ID"`
+	PlotId    string        `header:"Plot ID"`
 	Status    int           `header:"Status"`
 	Phase     int           `header:"Phase"    data-align:"right"`
 	Progress  int           `header:"Progress" data-align:"right"`
@@ -232,21 +232,21 @@ type activePlotsData struct {
 func (apd *activePlotsData) Strings() []string {
 	status := "Unknown"
 	switch apd.Status {
-	case plotRunning:
+	case PlotRunning:
 		status = "Running"
-	case plotError:
+	case PlotError:
 		status = "Errored"
-	case plotFinished:
+	case PlotFinished:
 		status = "Finished"
 	}
 	return []string{
 		apd.Host,
-		shortenPlotID(apd.PlotID),
+		shortenPlotId(apd.PlotId),
 		status,
 		fmt.Sprintf("%d/4", apd.Phase),
 		fmt.Sprintf("%d%%", apd.Progress),
 		apd.StartTime.Format("2006-01-02 15:04:05"),
-		durationString(apd.Duration),
+		DurationString(apd.Duration),
 		apd.PlotDir,
 		apd.DestDir,
 	}
@@ -255,7 +255,7 @@ func (apd *activePlotsData) Strings() []string {
 func (client *Client) makeActivePlotsData(host string, p *ActivePlot) *activePlotsData {
 	apd := &activePlotsData{}
 	apd.Host = host
-	apd.PlotID = p.ID
+	apd.PlotId = p.Id
 	apd.Status = p.State
 	apd.Phase = p.getCurrentPhase()
 	apd.Progress = p.getProgress()
@@ -277,14 +277,14 @@ func (client *Client) drawActivePlotsTable() {
 
 	for host, msg := range client.msg {
 		for _, plot := range msg.Actives {
-			delete(keysToRemove, plot.ID)
-			client.activeLogs[plot.ID] = plot.Tail
-			client.activePlotsTable.SetRowData(plot.ID, client.makeActivePlotsData(host, plot))
+			delete(keysToRemove, plot.Id)
+			client.activeLogs[plot.Id] = plot.Tail
+			client.activePlotsTable.SetRowData(plot.Id, client.makeActivePlotsData(host, plot))
 			activePlotsCount++
 		}
 	}
 
-	for key := range keysToRemove {
+	for key, _ := range keysToRemove {
 		client.activePlotsTable.ClearRowData(key)
 	}
 
@@ -292,10 +292,10 @@ func (client *Client) drawActivePlotsTable() {
 }
 
 func (client *Client) selectActivePlot(key string) {
-	client.logPlotID = key
+	client.logPlotId = key
 	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
 	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
-	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotID(client.logPlotID)))
+	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
 	if log, found := client.activeLogs[key]; found {
 		client.logTextbox.SetText(strings.Join(log, ""))
 		client.logTextbox.ScrollToEnd()
@@ -322,11 +322,11 @@ func (pdd *plotDirData) Strings() []string {
 	return []string{
 		pdd.Host,
 		pdd.PlotDir,
-		spaceString(pdd.AvailableBytes),
-		durationString(pdd.AvgPhase1),
-		durationString(pdd.AvgPhase2),
-		durationString(pdd.AvgPhase3),
-		durationString(pdd.AvgPhase4),
+		SpaceString(pdd.AvailableBytes),
+		DurationString(pdd.AvgPhase1),
+		DurationString(pdd.AvgPhase2),
+		DurationString(pdd.AvgPhase3),
+		DurationString(pdd.AvgPhase4),
 		fmt.Sprintf("%d", pdd.Count),
 		fmt.Sprintf("%d", pdd.Failed),
 	}
@@ -356,13 +356,13 @@ func (client *Client) makePlotDirsData() map[string]*plotDirData {
 				plotDirs[host+"||"+plot.PlotDir] = pdd
 			}
 			switch plot.State {
-			case plotFinished:
+			case PlotFinished:
 				pdd.AvgPhase1 += plot.getPhaseTime(1).Sub(plot.getPhaseTime(0))
 				pdd.AvgPhase2 += plot.getPhaseTime(2).Sub(plot.getPhaseTime(1))
 				pdd.AvgPhase3 += plot.getPhaseTime(3).Sub(plot.getPhaseTime(2))
 				pdd.AvgPhase4 += plot.getPhaseTime(4).Sub(plot.getPhaseTime(3))
 				pdd.Count++
-			case plotError, plotKilled:
+			case PlotError, PlotKilled:
 				pdd.Failed++
 			}
 		}
@@ -392,7 +392,7 @@ func (client *Client) drawPlotDirsTable() {
 		client.plotDirsTable.SetRowData(key, pdd)
 	}
 
-	for key := range keysToRemove {
+	for key, _ := range keysToRemove {
 		client.plotDirsTable.ClearRowData(key)
 	}
 
@@ -414,8 +414,8 @@ func (ddd *destDirData) Strings() []string {
 	return []string{
 		ddd.Host,
 		ddd.DestDir,
-		spaceString(ddd.AvailableBytes),
-		durationString(ddd.AvgPlotTime),
+		SpaceString(ddd.AvailableBytes),
+		DurationString(ddd.AvgPlotTime),
 		fmt.Sprintf("%d", ddd.Count),
 		fmt.Sprintf("%d", ddd.Failed),
 	}
@@ -445,10 +445,10 @@ func (client *Client) makeDestDirsData() map[string]*destDirData {
 				destDirs[host+"||"+plot.TargetDir] = ddd
 			}
 			switch plot.State {
-			case plotFinished:
+			case PlotFinished:
 				ddd.AvgPlotTime += plot.getPhaseTime(4).Sub(plot.getPhaseTime(0))
 				ddd.Count++
-			case plotError, plotKilled:
+			case PlotError, PlotKilled:
 				ddd.Failed++
 			}
 		}
@@ -475,7 +475,7 @@ func (client *Client) drawDestDirsTable() {
 		client.destDirsTable.SetRowData(key, ddd)
 	}
 
-	for key := range keysToRemove {
+	for key, _ := range keysToRemove {
 		client.destDirsTable.ClearRowData(key)
 	}
 
@@ -486,7 +486,7 @@ func (client *Client) drawDestDirsTable() {
 
 type archivedPlotData struct {
 	Host      string        `header:"Host"`
-	PlotID    string        `header:"Plot Id"`
+	PlotId    string        `header:"Plot Id"`
 	Status    int           `header:"Status"`
 	Phase     int           `header:"Phase" data-align:"right"`
 	StartTime time.Time     `header:"Start Time"`
@@ -499,21 +499,21 @@ type archivedPlotData struct {
 func (apd *archivedPlotData) Strings() []string {
 	status := "Unknown"
 	switch apd.Status {
-	case plotRunning:
+	case PlotRunning:
 		status = "Running"
-	case plotError:
+	case PlotError:
 		status = "Errored"
-	case plotFinished:
+	case PlotFinished:
 		status = "Finished"
 	}
 	return []string{
 		apd.Host,
-		shortenPlotID(apd.PlotID),
+		shortenPlotId(apd.PlotId),
 		status,
 		fmt.Sprintf("%d/4", apd.Phase),
 		apd.StartTime.Format("2006-01-02 15:04:05"),
 		apd.EndTime.Format("2006-01-02 15:04:05"),
-		durationString(apd.Duration),
+		DurationString(apd.Duration),
 		apd.PlotDir,
 		apd.DestDir,
 	}
@@ -522,7 +522,7 @@ func (apd *archivedPlotData) Strings() []string {
 func (client *Client) makeArchivedPlotData(host string, p *ActivePlot) *archivedPlotData {
 	apd := &archivedPlotData{}
 	apd.Host = host
-	apd.PlotID = p.ID
+	apd.PlotId = p.Id
 	apd.Status = p.State
 	apd.Phase = p.getCurrentPhase()
 	apd.StartTime = p.getPhaseTime(0)
@@ -545,21 +545,21 @@ func (client *Client) drawArchivedPlotsTable() {
 
 	for host, msg := range client.msg {
 		for _, plot := range msg.Archived {
-			delete(keysToRemove, plot.ID)
-			client.archivedLogs[plot.ID] = plot.Tail
-			client.archivedPlotsTable.SetRowData(plot.ID, client.makeArchivedPlotData(host, plot))
+			delete(keysToRemove, plot.Id)
+			client.archivedLogs[plot.Id] = plot.Tail
+			client.archivedPlotsTable.SetRowData(plot.Id, client.makeArchivedPlotData(host, plot))
 			switch plot.State {
-			case plotFinished:
+			case PlotFinished:
 				archivedPlotsSuccess++
-			case plotKilled:
+			case PlotKilled:
 				archivedPlotsFailed++
-			case plotError:
+			case PlotError:
 				archivedPlotsFailed++
 			}
 		}
 	}
 
-	for key := range keysToRemove {
+	for key, _ := range keysToRemove {
 		client.archivedPlotsTable.ClearRowData(key)
 	}
 
@@ -571,10 +571,10 @@ func (client *Client) drawArchivedPlotsTable() {
 }
 
 func (client *Client) selectArchivedPlot(key string) {
-	client.logPlotID = key
+	client.logPlotId = key
 	client.activePlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrDim))
 	client.archivedPlotsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse | tcell.AttrBold))
-	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotID(client.logPlotID)))
+	client.logTextbox.SetTitle(fmt.Sprintf(" Log (%s) ", shortenPlotId(client.logPlotId)))
 	if log, found := client.archivedLogs[key]; found {
 		client.logTextbox.SetText(strings.Join(log, ""))
 		client.logTextbox.ScrollToEnd()

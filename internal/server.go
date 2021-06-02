@@ -14,7 +14,7 @@ import (
 )
 
 type Server struct {
-	config               *plotConfig
+	config               *PlotConfig
 	active               map[int64]*ActivePlot
 	archive              []*ActivePlot
 	currentTemp          int
@@ -32,7 +32,7 @@ func (server *Server) ProcessLoop(configPath string, port int) {
 		}
 	}()
 
-	server.config = &plotConfig{
+	server.config = &PlotConfig{
 		ConfigPath: configPath,
 	}
 	server.active = map[int64]*ActivePlot{}
@@ -54,21 +54,21 @@ func (server *Server) createPlot(t time.Time) {
 		}
 		server.config.Lock.RUnlock()
 	}
-	log.Printf("%s, %d Active Plots\n", t.Format("2006-01-02 15:04:05"), len(server.active))
+	fmt.Printf("%s, %d Active Plots\n", t.Format("2006-01-02 15:04:05"), len(server.active))
 	for _, plot := range server.active {
-		log.Print(plot.String(server.config.CurrentConfig.ShowPlotLog))
-		if plot.State == plotFinished || plot.State == plotError {
+		fmt.Print(plot.String(server.config.CurrentConfig.ShowPlotLog))
+		if plot.State == PlotFinished || plot.State == PlotError {
 			server.archive = append(server.archive, plot)
-			delete(server.active, plot.PlotID)
+			delete(server.active, plot.PlotId)
 		}
 	}
-	log.Println()
+	fmt.Println(" ")
 }
 
-func (server *Server) createNewPlot(cfg *config) {
+func (server *Server) createNewPlot(config *Config) {
 	defer server.lock.Unlock()
 	server.lock.Lock()
-	if len(cfg.TempDirectory) == 0 || len(cfg.TargetDirectory) == 0 {
+	if len(config.TempDirectory) == 0 || len(config.TargetDirectory) == 0 {
 		return
 	}
 	if time.Now().Before(server.targetDelayStartTime) {
@@ -76,15 +76,15 @@ func (server *Server) createNewPlot(cfg *config) {
 		return
 	}
 
-	if server.currentTarget >= len(cfg.TargetDirectory) {
+	if server.currentTarget >= len(config.TargetDirectory) {
 		server.currentTarget = 0
-		server.targetDelayStartTime = time.Now().Add(time.Duration(cfg.StaggeringDelay) * time.Minute)
+		server.targetDelayStartTime = time.Now().Add(time.Duration(config.StaggeringDelay) * time.Minute)
 		return
 	}
-	if server.currentTemp >= len(cfg.TempDirectory) {
+	if server.currentTemp >= len(config.TempDirectory) {
 		server.currentTemp = 0
 	}
-	if cfg.MaxActivePlotPerPhase1 > 0 {
+	if config.MaxActivePlotPerPhase1 > 0 {
 		getPhase1 := func(plot *ActivePlot) bool {
 			if strings.HasPrefix(plot.Phase, "1/4") {
 				return true
@@ -100,56 +100,56 @@ func (server *Server) createNewPlot(cfg *config) {
 			}
 		}
 
-		if cfg.MaxActivePlotPerPhase1 <= sum {
+		if config.MaxActivePlotPerPhase1 <= sum {
 			log.Printf("Skipping, Too many active plots in Phase 1: %d", sum)
 			return
 		}
 	}
-	plotDir := cfg.TempDirectory[server.currentTemp]
+	plotDir := config.TempDirectory[server.currentTemp]
 	server.currentTemp++
-	if server.currentTemp >= len(cfg.TempDirectory) {
+	if server.currentTemp >= len(config.TempDirectory) {
 		server.currentTemp = 0
 	}
-	if cfg.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= cfg.MaxActivePlotPerTemp {
+	if config.MaxActivePlotPerTemp > 0 && int(server.countActiveTemp(plotDir)) >= config.MaxActivePlotPerTemp {
 		log.Printf("Skipping [%s], too many active plots: %d", plotDir, int(server.countActiveTemp(plotDir)))
 		return
 	}
-	targetDir := cfg.TargetDirectory[server.currentTarget]
+	targetDir := config.TargetDirectory[server.currentTarget]
 	server.currentTarget++
 
-	if cfg.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= cfg.MaxActivePlotPerTarget {
+	if config.MaxActivePlotPerTarget > 0 && int(server.countActiveTarget(targetDir)) >= config.MaxActivePlotPerTarget {
 		log.Printf("Skipping [%s], too many active plots: %d", targetDir, int(server.countActiveTarget(targetDir)))
 		return
 	}
 
-	server.targetDelayStartTime = time.Now().Add(time.Duration(cfg.DelaysBetweenPlot) * time.Minute)
+	server.targetDelayStartTime = time.Now().Add(time.Duration(config.DelaysBetweenPlot) * time.Minute)
 
 	targetDirSpace := server.getDiskSpaceAvailable(targetDir)
-	if cfg.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*plotSize > targetDirSpace {
-		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/gb)
+	if config.DiskSpaceCheck && (server.countActiveTarget(targetDir)+1)*PLOT_SIZE > targetDirSpace {
+		log.Printf("Skipping [%s], Not enough space: %d", targetDir, targetDirSpace/GB)
 		return
 	}
 
 	t := time.Now()
 	plot := &ActivePlot{
-		PlotID:           t.Unix(),
+		PlotId:           t.Unix(),
 		TargetDir:        targetDir,
 		PlotDir:          plotDir,
-		Fingerprint:      cfg.Fingerprint,
-		FarmerPublicKey:  cfg.FarmerPublicKey,
-		PoolPublicKey:    cfg.PoolPublicKey,
-		Threads:          cfg.Threads,
-		Buffers:          cfg.Buffers,
-		PlotSize:         cfg.PlotSize,
-		DisableBitField:  cfg.DisableBitField,
-		UseTargetForTmp2: cfg.UseTargetForTmp2,
-		BucketSize:       cfg.BucketSize,
-		SavePlotLogDir:   cfg.SavePlotLogDir,
+		Fingerprint:      config.Fingerprint,
+		FarmerPublicKey:  config.FarmerPublicKey,
+		PoolPublicKey:    config.PoolPublicKey,
+		Threads:          config.Threads,
+		Buffers:          config.Buffers,
+		PlotSize:         config.PlotSize,
+		DisableBitField:  config.DisableBitField,
+		UseTargetForTmp2: config.UseTargetForTmp2,
+		BucketSize:       config.BucketSize,
+		SavePlotLogDir:   config.SavePlotLogDir,
 		Phase:            "NA",
 		Tail:             nil,
-		State:            plotRunning,
+		State:            PlotRunning,
 	}
-	server.active[plot.PlotID] = plot
+	server.active[plot.PlotId] = plot
 	go plot.RunPlot()
 }
 
@@ -211,9 +211,9 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 	case "DELETE":
 		for _, v := range server.active {
-			if v.ID == req.RequestURI {
+			if v.Id == req.RequestURI {
 				v.process.Kill()
-				v.State = plotKilled
+				v.State = PlotKilled
 			}
 		}
 	}

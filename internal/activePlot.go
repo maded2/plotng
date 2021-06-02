@@ -15,23 +15,21 @@ import (
 	"time"
 )
 
-const (
-	kb       = uint64(1024)
-	mb       = kb * kb
-	gb       = kb * kb * kb
-	tb       = kb * kb * kb * kb
-	plotSize = 105 * gb
-)
+const KB = uint64(1024)
+const MB = KB * KB
+const GB = KB * KB * KB
+const TB = KB * KB * KB * KB
+const PLOT_SIZE = 105 * GB
 
 const (
-	plotRunning = iota
-	plotError
-	plotFinished
-	plotKilled
+	PlotRunning = iota
+	PlotError
+	PlotFinished
+	PlotKilled
 )
 
 type ActivePlot struct {
-	PlotID          int64
+	PlotId          int64
 	StartTime       time.Time
 	EndTime         time.Time
 	TargetDir       string
@@ -48,7 +46,7 @@ type ActivePlot struct {
 	Tail             []string
 	State            int
 	lock             sync.RWMutex
-	ID               string
+	Id               string
 	Progress         string
 	Phase1Time       time.Time
 	Phase2Time       time.Time
@@ -107,21 +105,21 @@ func (ap *ActivePlot) getProgress() int {
 }
 
 func (ap *ActivePlot) Duration(currentTime time.Time) string {
-	return durationString(currentTime.Sub(ap.StartTime))
+	return DurationString(currentTime.Sub(ap.StartTime))
 }
 
 func (ap *ActivePlot) String(showLog bool) string {
 	ap.lock.RLock()
 	state := "Unknown"
 	switch ap.State {
-	case plotRunning:
+	case PlotRunning:
 		state = "Running"
-	case plotError:
+	case PlotError:
 		state = "Errored"
-	case plotFinished:
+	case PlotFinished:
 		state = "Finished"
 	}
-	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.ID, state, ap.Phase, ap.Progress, ap.StartTime.Format("2006-01-02 15:04:05"), ap.Duration(time.Now()), ap.PlotDir, ap.TargetDir)
+	s := fmt.Sprintf("Plot [%s] - %s, Phase: %s %s, Start Time: %s, Duration: %s, Tmp Dir: %s, Dst Dir: %s\n", ap.Id, state, ap.Phase, ap.Progress, ap.StartTime.Format("2006-01-02 15:04:05"), ap.Duration(time.Now()), ap.PlotDir, ap.TargetDir)
 	if showLog {
 		for _, l := range ap.Tail {
 			s += fmt.Sprintf("\t%s", l)
@@ -193,42 +191,42 @@ func (ap *ActivePlot) RunPlot() {
 	}
 
 	cmd := exec.Command("chia", args...)
-	ap.State = plotRunning
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		ap.State = plotError
+	ap.State = PlotRunning
+	if stderr, err := cmd.StderrPipe(); err != nil {
+		ap.State = PlotError
 		log.Printf("Failed to start Plotting: %s", err)
 		return
+	} else {
+		go ap.processLogs(stderr)
 	}
-	go ap.processLogs(stderr)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		ap.State = plotError
+	if stdout, err := cmd.StdoutPipe(); err != nil {
+		ap.State = PlotError
 		log.Printf("Failed to start Plotting: %s", err)
 		return
+	} else {
+		go ap.processLogs(stdout)
 	}
-	go ap.processLogs(stdout)
+	//log.Println(cmd.String())
 
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to start chia command: %s", err)
-		ap.State = plotError
+		ap.State = PlotError
 		return
-	}
-
-	ap.process = cmd.Process
-	ap.Pid = cmd.Process.Pid
-	if err := cmd.Wait(); err != nil {
-		if ap.State != plotKilled {
-			ap.State = plotError
-			log.Printf("Plotting Exit with Error: %s", err)
-		} else {
-			log.Printf("Plot [%s] Killed", ap.ID)
+	} else {
+		ap.process = cmd.Process
+		ap.Pid = cmd.Process.Pid
+		if err := cmd.Wait(); err != nil {
+			if ap.State != PlotKilled {
+				ap.State = PlotError
+				log.Printf("Plotting Exit with Error: %s", err)
+			} else {
+				log.Printf("Plot [%s] Killed", ap.Id)
+			}
+			ap.cleanup()
+			return
 		}
-		ap.cleanup()
-		return
 	}
-	ap.State = plotFinished
+	ap.State = PlotFinished
 	return
 }
 
@@ -251,12 +249,12 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 				}
 			}
 			if strings.HasPrefix(s, "ID: ") {
-				ap.ID = strings.TrimSuffix(s[4:], "\n")
+				ap.Id = strings.TrimSuffix(s[4:], "\n")
 				if len(ap.SavePlotLogDir) > 0 {
-					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.ID))
+					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
 					logFile, err = os.Create(logFilePath)
 					if err != nil {
-						log.Printf("Failed to create log file [%s]: %s", logFilePath, err)
+						fmt.Sprintf("Failed to create log file [%s]: %s", logFilePath, err)
 					} else {
 						for _, l := range ap.Tail {
 							logFile.Write([]byte(l))
@@ -288,12 +286,12 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 }
 
 func (ap *ActivePlot) cleanup() {
-	if len(ap.ID) == 0 {
+	if len(ap.Id) == 0 {
 		return
 	}
 	if fileList, err := ioutil.ReadDir(ap.PlotDir); err == nil {
 		for _, file := range fileList {
-			if strings.Index(file.Name(), ap.ID) >= 0 && strings.HasSuffix(file.Name(), ".tmp") {
+			if strings.Index(file.Name(), ap.Id) >= 0 && strings.HasSuffix(file.Name(), ".tmp") {
 				fullPath := fmt.Sprintf("%s%c%s", ap.PlotDir, os.PathSeparator, file.Name())
 
 				if err := os.Remove(fullPath); err == nil {
