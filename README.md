@@ -18,17 +18,17 @@ Pre-built binaries available for 64-bits Linux, Windows and MacOS (I've only tes
 
     go get github.com/maded2/plotng
     cd plotng
-    go install plotng/cmd/plotng
+    go install plotng/cmd/plotng-client plotng/cmd/plotng-server
 
 
 
 ## Running Server (runs on the plotter)
 
 `
-plotng -config <json config file> -port <plotter port number, default: 8484>
+plotng-server -config <json config file> -port <plotter port number, default: 8484>
 `
 
-**Please note**: chia enviornment should be activated before starting plotng
+**Please note**: chia environment should be activated before starting plotng-server
 
 ## Running Monitoring UI (run anywhere)
 
@@ -38,9 +38,9 @@ The UI can run on any host and point back to the server using the host and port 
 
 
 `
-plotng -ui -host <comma separated list of plotters host name or IP with/without port number>
+plotng-client -host <comma separated list of plotters host name or IP with/without port number>
 
-eg. plotng -ui -host plotter1:8484,plotter2,plotter3:8485
+eg. plotng-client -host plotter1:8484,plotter2,plotter3:8485
 `
 
 ## Configuration File (JSON format)
@@ -87,6 +87,7 @@ Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 - DiskSpaceCheck : check if destination directories have enough disk space to hold a new plot (only tested on Linux, may not work on MacOS / Windows)
 - DelaysBetweenPlot : Delays in mins between starting a new plot (minimum is 1 min)
 - MaxActivePlotPerTarget : Maximum active plots per target directory (default: 0 - no limit)
+- MaxActivePlotPerTemp : Maximum active plots per temp directory (default: 0 - no limit)
 - MaxActivePlotPerPhase1 : Maximum active plots per Phase 1 (default: 0 - no limit)
 - UseTargetForTmp2 : use target directory for tmp2
 - BucketSize : specify custom busket size (default: 0 - use chia default)
