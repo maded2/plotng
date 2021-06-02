@@ -4,7 +4,7 @@
   "PoolPublicKey": "",
   "Threads": 0,
   "Buffers": 0,
-  "PlotSize": 32,
+  "DisableBitField": false,
   "NumberOfParallelPlots": 1,
   "TempDirectory": ["/media/eddie/tmp1", "/media/eddie/tmp2", "/media/eddie/tmp3"],
   "TargetDirectory": ["/media/eddie/target1", "/media/eddie/target2"],
@@ -13,10 +13,10 @@
   "DiskSpaceCheck": false,
   "DelaysBetweenPlot": 0,
   "MaxActivePlotPerTarget": 0,
-  "DisableBitField": false,
   "MaxActivePlotPerTemp": 0,
   "MaxActivePlotPerPhase1": 0,
   "UseTargetForTmp2": false,
   "BucketSize": 0,
-  "SavePlotLogDir": ""
+  "SavePlotLogDir": "",
+  "PlotSize": 32
 }
