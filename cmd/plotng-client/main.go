@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	host := flag.String("host", "localhost", "host server name, default: localhost")
+	hosts := flag.String("hosts", "localhost", "hosts to query, separated by comma, default: localhost")
 
 	flag.Parse()
 	if flag.Parsed() == false {
@@ -15,5 +15,5 @@ func main() {
 		return
 	}
 	client := &internal.Client{}
-	client.ProcessLoop(*host)
+	client.ProcessLoop(*hosts)
 }
