@@ -150,7 +150,7 @@ func (server *Server) createNewPlot(config *Config) {
 		State:            PlotRunning,
 	}
 	server.active[plot.PlotId] = plot
-	go plot.RunPlot()
+	go plot.RunPlot(config)
 }
 
 func (server *Server) countActiveTarget(path string) (count uint64) {

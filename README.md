@@ -28,7 +28,7 @@ Pre-built binaries available for 64-bits Linux, Windows and MacOS (I've only tes
 plotng-server -config <json config file> -port <plotter port number, default: 8484>
 `
 
-**Please note**: chia environment should be activated before starting plotng-server
+**Please note**: chia environment should be activated before starting plotng-server, or ChiaRoot should be set in the configuration file.
 
 ## Running Monitoring UI (run anywhere)
 
@@ -45,13 +45,14 @@ eg. plotng-client -host plotter1:8484,plotter2,plotter3:8485
 
 ## Configuration File (JSON format)
 
-
+```json
     {
         "Fingerprint": "",
         "FarmerPublicKey": "",
         "PoolPublicKey": "",
         "Threads": 0,
         "Buffers": 0,
+        "DisableBitField": false,
         "NumberOfParallelPlots": 1,
         "TempDirectory": ["/media/eddie/tmp1", "/media/eddie/tmp2", "/media/eddie/tmp3"],
         "TargetDirectory": ["/media/eddie/target1", "/media/eddie/target2"],
@@ -60,14 +61,15 @@ eg. plotng-client -host plotter1:8484,plotter2,plotter3:8485
         "DiskSpaceCheck": false,
         "DelaysBetweenPlot": 0,
         "MaxActivePlotPerTarget": 0,
-        "DisableBitField": false,
         "MaxActivePlotPerTemp": 0,
         "MaxActivePlotPerPhase1": 0,
         "UseTargetForTmp2": false,
         "BucketSize": 0,
         "SavePlotLogDir": "",
-        "PlotSize": 32
+        "PlotSize": 32,
+        "ChiaRoot": ""
     }
+```
 
 Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 
@@ -93,5 +95,6 @@ Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 - BucketSize : specify custom busket size (default: 0 - use chia default)
 - SavePlotLogDir : saves plotting logs to this directory. logs are not saved if no directory is provided (default: "")
 - PlotSize : plot size, default to k32 is not set.  If set then it also pick sensible buffers for the given size.
+- ChiaRoot : the directory to find the chia binary in (typically this should remain as an empty string and the environment should be activated instead)
 
 Please note PlotNG now skips any destination directory which have less than 105GB of disk space, if you set DiskSpaceCheck to true.
