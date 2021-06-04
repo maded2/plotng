@@ -162,8 +162,8 @@ func TestCanCreateNewPlotLimitsPhase1(t *testing.T) {
 	svr.active[1].Phase = "2/4"
 	checkSuccess(t, svr, now, "target", "plot")
 	svr.active[3] = &ActivePlot{State: PlotRunning, Phase: "1/4"}
-	checkFailure(t, svr, now, msgStagger) // After cycling targets, it's always a reject
-	checkFailure(t, svr, now, msgTooManyPlot1)        // We're busy
+	checkFailure(t, svr, now, msgStagger)      // After cycling targets, it's always a reject
+	checkFailure(t, svr, now, msgTooManyPlot1) // We're busy
 
 }
 
