@@ -29,6 +29,7 @@ type Config struct {
 	UseTargetForTmp2       bool
 	BucketSize             int
 	SavePlotLogDir         string
+	ChiaRoot               string
 }
 
 type PlotConfig struct {

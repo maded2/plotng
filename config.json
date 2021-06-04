@@ -18,5 +18,6 @@
   "UseTargetForTmp2": false,
   "BucketSize": 0,
   "SavePlotLogDir": "",
-  "PlotSize": 32
+  "PlotSize": 32,
+  "ChiaRoot": ""
 }

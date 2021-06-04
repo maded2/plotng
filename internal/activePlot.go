@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -129,7 +130,7 @@ func (ap *ActivePlot) String(showLog bool) string {
 	return s
 }
 
-func (ap *ActivePlot) RunPlot() {
+func (ap *ActivePlot) RunPlot(config *Config) {
 	ap.StartTime = time.Now()
 	defer func() {
 		ap.EndTime = time.Now()
@@ -190,7 +191,7 @@ func (ap *ActivePlot) RunPlot() {
 		args = append(args, fmt.Sprintf("-u%d", ap.BucketSize))
 	}
 
-	cmd := exec.Command("chia", args...)
+	cmd := exec.Command(path.Join(config.ChiaRoot, "chia"), args...)
 	ap.State = PlotRunning
 	if stderr, err := cmd.StderrPipe(); err != nil {
 		ap.State = PlotError
