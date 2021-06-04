@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -85,17 +84,9 @@ func (server *Server) createNewPlot(config *Config) {
 		server.currentTemp = 0
 	}
 	if config.MaxActivePlotPerPhase1 > 0 {
-		getPhase1 := func(plot *ActivePlot) bool {
-			if strings.HasPrefix(plot.Phase, "1/4") {
-				return true
-			}
-			return false
-		}
-
 		var sum int
-
 		for _, plot := range server.active {
-			if getPhase1(plot) {
+			if plot.State == PlotRunning && plot.getCurrentPhase() <= 1 {
 				sum++
 			}
 		}
