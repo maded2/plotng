@@ -20,6 +20,7 @@ type Client struct {
 	plotDirsTable      *widget.SortedTable
 	destDirsTable      *widget.SortedTable
 	archivedPlotsTable *widget.SortedTable
+	hostsTable         *widget.SortedTable
 
 	logTextbox          *tview.TextView
 	hosts               []string
@@ -47,7 +48,7 @@ func (client *Client) ProcessLoop(hostList string) {
 	gob.Register(Msg{})
 	gob.Register(ActivePlot{})
 
-	client.setupUI()
+	client.setupUI(len(client.hosts))
 
 	go client.processLoop()
 	client.app.Run()
@@ -94,8 +95,11 @@ func (client *Client) checkServer(host string) {
 	// Modify UI state on the tview thread.
 	client.app.QueueUpdateDraw(func() {
 		if err != nil {
-			client.logTextbox.SetText("Log (error) ")
-			client.logTextbox.SetText(err.Error())
+			if _, ok := client.msg[host]; !ok {
+				client.msg[host] = &Msg{}
+			}
+			client.msg[host].Status = err.Error()
+			client.drawHostsTable()
 			return
 		}
 		client.msg[host] = msg
@@ -103,6 +107,7 @@ func (client *Client) checkServer(host string) {
 		client.drawPlotDirsTable()
 		client.drawDestDirsTable()
 		client.drawArchivedPlotsTable()
+		client.drawHostsTable()
 
 		log, ok := client.activeLogs[client.logPlotId]
 		if !ok {
@@ -133,6 +138,10 @@ func (client *Client) tabBetweenTables(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 	if client.archivedPlotsTable.HasFocus() {
+		client.hostsTable.SetFocus(client.app)
+		return nil
+	}
+	if client.hostsTable.HasFocus() {
 		client.app.SetFocus(client.logTextbox)
 		return nil
 	}
@@ -143,7 +152,7 @@ func (client *Client) tabBetweenTables(event *tcell.EventKey) *tcell.EventKey {
 	return event
 }
 
-func (client *Client) setupUI() {
+func (client *Client) setupUI(hostCount int) {
 	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
 	client.activePlotsTable = widget.NewSortedTable()
 	client.activePlotsTable.SetSelectable(true)
@@ -183,6 +192,15 @@ func (client *Client) setupUI() {
 	client.archivedPlotsTable.SetupFromType(archivedPlotData{})
 	client.archivedPlotsTable.SetInputCapture(client.tabBetweenTables)
 
+	client.hostsTable = widget.NewSortedTable()
+	client.hostsTable.SetSelectable(true)
+	client.hostsTable.SetBorder(true)
+	client.hostsTable.SetTitleAlign(tview.AlignLeft)
+	client.hostsTable.SetTitle(" Hosts ")
+	client.hostsTable.SetSelectedStyle(tcell.StyleDefault.Attributes(tcell.AttrReverse))
+	client.hostsTable.SetupFromType(hostsData{})
+	client.hostsTable.SetInputCapture(client.tabBetweenTables)
+
 	client.logTextbox = tview.NewTextView()
 	client.logTextbox.SetBorder(true).SetTitle(" Log ").SetTitleAlign(tview.AlignLeft)
 	client.logTextbox.SetInputCapture(client.tabBetweenTables)
@@ -201,6 +219,11 @@ func (client *Client) setupUI() {
 	mainPanel.AddItem(client.activePlotsTable, 0, 1, true)
 	mainPanel.AddItem(dirPanel, 0, 1, false)
 	mainPanel.AddItem(client.archivedPlotsTable, 0, 1, false)
+	if hostCount > 4 { // hosts is low priority, so keep the screen space usage low
+		hostCount = 4
+	}
+	const extraRows = 1+1+1 // border + header row + border
+	mainPanel.AddItem(client.hostsTable, hostCount+extraRows, 0, false)
 	mainPanel.AddItem(client.logTextbox, 0, 1, false)
 
 	client.app = tview.NewApplication()
@@ -581,4 +604,43 @@ func (client *Client) selectArchivedPlot(key string) {
 	} else {
 		client.logTextbox.SetText("")
 	}
+}
+
+// Host data
+
+type hostsData struct {
+	Host       string    `header:"Host"`
+	Status     string    `header:"Status"`
+}
+
+func (hd *hostsData) Strings() []string {
+	return []string{
+		hd.Host,
+		hd.Status,
+	}
+}
+
+func (client *Client) makeHostsData(host string, msg *Msg) *hostsData {
+	hd := &hostsData{}
+	hd.Host = host
+	hd.Status = msg.Status
+	return hd
+}
+
+func (client *Client) drawHostsTable() {
+	keysToRemove := make(map[string]struct{})
+	for _, key := range client.hostsTable.Keys() {
+		keysToRemove[key] = struct{}{}
+	}
+
+	for host, msg := range client.msg {
+		delete(keysToRemove, host)
+		client.hostsTable.SetRowData(host, client.makeHostsData(host, msg))
+	}
+
+	for key, _ := range keysToRemove {
+		client.hostsTable.ClearRowData(key)
+	}
+
+	client.hostsTable.SetTitle(fmt.Sprintf(" Hosts [%d] ", len(client.msg)))
 }

@@ -20,6 +20,7 @@ type Server struct {
 	currentTemp          int
 	currentTarget        int
 	targetDelayStartTime time.Time
+	lastStatus           string
 	lock                 sync.RWMutex
 }
 
@@ -49,15 +50,19 @@ func (server *Server) createPlot(t time.Time) {
 	}
 	if server.config.CurrentConfig != nil {
 		server.config.Lock.RLock()
+		server.lock.Lock()
 		if len(server.active) < server.config.CurrentConfig.NumberOfParallelPlots {
-			server.lock.Lock()
 			if targetDir, plotDir, err := server.canCreateNewPlot(server.config.CurrentConfig, time.Now()); err == nil {
 				server.createNewPlot(server.config.CurrentConfig, targetDir, plotDir)
+				server.lastStatus = "Creating plot"
 			} else {
 				log.Printf("Skipping new plot: %v", err)
+				server.lastStatus = err.Error()
 			}
-			server.lock.Unlock()
+		} else {
+			server.lastStatus = fmt.Sprintf("running %d/%d plots", len(server.active), server.config.CurrentConfig.NumberOfParallelPlots)
 		}
+		server.lock.Unlock()
 		server.config.Lock.RUnlock()
 	}
 	fmt.Printf("%s, %d Active Plots\n", t.Format("2006-01-02 15:04:05"), len(server.active))
@@ -196,6 +201,7 @@ func (server *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 				msg.TempDirs[dir] = server.getDiskSpaceAvailable(dir)
 			}
 		}
+		msg.Status = server.lastStatus
 		var buf bytes.Buffer
 		enc := gob.NewEncoder(&buf)
 		if err := enc.Encode(msg); err == nil {
@@ -220,4 +226,5 @@ type Msg struct {
 	Archived   []*ActivePlot
 	TempDirs   map[string]uint64
 	TargetDirs map[string]uint64
+	Status     string
 }
