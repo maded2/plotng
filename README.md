@@ -38,9 +38,9 @@ The UI can run on any host and point back to the server using the host and port 
 
 
 ```
-plotng-client -host <comma separated list of plotters host name or IP with/without port number>
+plotng-client -hosts <comma separated list of plotters host name or IP with/without port number> -alternate-mouse <optional, may be needed for mouse support through PuTTY)
 
-eg. plotng-client -host plotter1:8484,plotter2,plotter3:8485
+eg. plotng-client -hosts plotter1:8484,plotter2,plotter3:8485
 ```
 
 ## Configuration File (JSON format)
