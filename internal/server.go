@@ -23,11 +23,11 @@ type Server struct {
 	lock                 sync.RWMutex
 }
 
-func (server *Server) ProcessLoop(configPath string, port int) {
+func (server *Server) ProcessLoop(configPath string, host string, port int) {
 	gob.Register(Msg{})
 	gob.Register(ActivePlot{})
 	go func() {
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), server); err != nil {
+		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), server); err != nil {
 			log.Fatalf("Failed to start webserver: %s", err)
 		}
 	}()

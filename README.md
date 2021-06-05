@@ -24,9 +24,9 @@ Pre-built binaries available for 64-bits Linux, Windows and MacOS (I've only tes
 
 ## Running Server (runs on the plotter)
 
-`
-plotng-server -config <json config file> -port <plotter port number, default: 8484>
-`
+```
+plotng-server -config <required, json config file> -port <optional, plotter port number, default: 8484> -address <optional, address to bind to, default is blank (any)>
+```
 
 **Please note**: chia environment should be activated before starting plotng-server, or ChiaRoot should be set in the configuration file.
 
@@ -37,11 +37,11 @@ plotng-server -config <json config file> -port <plotter port number, default: 84
 The UI can run on any host and point back to the server using the host and port parameter
 
 
-`
+```
 plotng-client -host <comma separated list of plotters host name or IP with/without port number>
 
 eg. plotng-client -host plotter1:8484,plotter2,plotter3:8485
-`
+```
 
 ## Configuration File (JSON format)
 
