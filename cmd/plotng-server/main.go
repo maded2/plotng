@@ -8,6 +8,7 @@ import (
 
 func main() {
 	configFile := flag.String("config", "", "configuration file")
+	address := flag.String("address", "", "local address to bind to, default any")
 	port := flag.Int("port", 8484, "host server port number, default: 8484")
 
 	flag.Parse()
@@ -16,5 +17,5 @@ func main() {
 		return
 	}
 	server := &internal.Server{}
-	server.ProcessLoop(*configFile, *port)
+	server.ProcessLoop(*configFile, *address, *port)
 }
