@@ -155,6 +155,9 @@ func (ap *ActivePlot) RunPlot(config *Config) {
 	}
 	if ap.PlotSize > 0 {
 		args = append(args, fmt.Sprintf("-k%d", ap.PlotSize))
+		if ap.PlotSize < 32 {
+			args = append(args, "--override-k")
+		}
 	} else {
 		args = append(args, "-k32")
 	}
