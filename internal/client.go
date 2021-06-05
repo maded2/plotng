@@ -28,6 +28,8 @@ type Client struct {
 	activeLogs          map[string][]string
 	archivedLogs        map[string][]string
 	logPlotId           string
+
+	AlternateMouse bool
 }
 
 var httpClient = &http.Client{
@@ -49,8 +51,40 @@ func (client *Client) ProcessLoop(hostList string) {
 
 	client.setupUI()
 
+	if err := client.configureMouse(); err != nil {
+		fmt.Printf("unable to setup screen: %v", err)
+		return
+	}
+
 	go client.processLoop()
+
 	client.app.Run()
+}
+
+func (client *Client) configureMouse() error {
+	// tcell.Screen exposes an EnableMouse with the option to specify which type of mouse events to
+	// capture (click, drag, all).  Unfortunately putty doesn't currently support "all", which is the
+	// default, so we need to specify either click or drag.
+	//
+	// This problem is further compounded by tview.Application not exposing the underlying Screen
+	// directly.  It does however use a Screen if we provide it; allowing us to create one, configure
+	// the mouse, and then use it.  We don't call Application.EnableMouse because that will override
+	// the setting we've used.
+	if client.AlternateMouse {
+		screen, err := tcell.NewScreen()
+		if err != nil {
+			return err
+		}
+		if err = screen.Init(); err != nil {
+			return err
+		}
+
+		screen.EnableMouse(tcell.MouseButtonEvents)
+		client.app.SetScreen(screen)
+	} else {
+		client.app.EnableMouse(true)
+	}
+	return nil
 }
 
 func (client *Client) processLoop() {
@@ -205,7 +239,6 @@ func (client *Client) setupUI() {
 
 	client.app = tview.NewApplication()
 	client.app.SetRoot(mainPanel, true)
-	client.app.EnableMouse(true)
 }
 
 func shortenPlotId(id string) string {
