@@ -30,6 +30,7 @@ type Config struct {
 	BucketSize             int
 	SavePlotLogDir         string
 	ChiaRoot               string
+	MadMaxPlotter          string
 }
 
 type PlotConfig struct {

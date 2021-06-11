@@ -57,6 +57,7 @@ type ActivePlot struct {
 	BucketSize       int
 	SavePlotLogDir   string
 	process          *os.Process
+	useMadmaxPlotter bool
 }
 
 // getPhaseTime returns the end time of a phase. phase 0 is the start time
@@ -135,66 +136,9 @@ func (ap *ActivePlot) RunPlot(config *Config) {
 	defer func() {
 		ap.EndTime = time.Now()
 	}()
-	args := []string{
-		"plots", "create",
-		"-n1",
-		"-t" + ap.PlotDir,
-		"-d" + ap.TargetDir,
-	}
-	if len(ap.Fingerprint) > 0 {
-		args = append(args, "-a"+ap.Fingerprint)
-	}
-	if len(ap.FarmerPublicKey) > 0 {
-		args = append(args, "-f"+ap.FarmerPublicKey)
-	}
-	if len(ap.PoolPublicKey) > 0 {
-		args = append(args, "-p"+ap.PoolPublicKey)
-	}
-	if ap.Threads > 0 {
-		args = append(args, fmt.Sprintf("-r%d", ap.Threads))
-	}
-	if ap.PlotSize > 0 {
-		args = append(args, fmt.Sprintf("-k%d", ap.PlotSize))
-		if ap.PlotSize < 32 {
-			args = append(args, "--override-k")
-		}
-	} else {
-		args = append(args, "-k32")
-	}
+	cmdStr, args := ap.createCmd(config)
 
-	if ap.Buffers > 0 {
-		args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
-	} else {
-		switch ap.PlotSize {
-		case 32:
-			args = append(args, fmt.Sprintf("-b%d", 3390))
-			break
-		case 33:
-			args = append(args, fmt.Sprintf("-b%d", 7400))
-			break
-		case 34:
-			args = append(args, fmt.Sprintf("-b%d", 14800))
-			break
-		case 35:
-			args = append(args, fmt.Sprintf("-b%d", 29600))
-			break
-		default:
-			break
-
-		}
-	}
-
-	if ap.DisableBitField {
-		args = append(args, "-e")
-	}
-	if ap.UseTargetForTmp2 {
-		args = append(args, "-2"+ap.TargetDir)
-	}
-	if ap.BucketSize > 0 {
-		args = append(args, fmt.Sprintf("-u%d", ap.BucketSize))
-	}
-
-	cmd := exec.Command(path.Join(config.ChiaRoot, "chia"), args...)
+	cmd := exec.Command(cmdStr, args...)
 	ap.State = PlotRunning
 	if stderr, err := cmd.StderrPipe(); err != nil {
 		ap.State = PlotError
@@ -234,6 +178,87 @@ func (ap *ActivePlot) RunPlot(config *Config) {
 	return
 }
 
+func (ap *ActivePlot) createCmd(config *Config) (cmd string, args []string) {
+	if len(config.MadMaxPlotter) > 0 {
+		ap.useMadmaxPlotter = true
+		cmd = config.MadMaxPlotter
+		args = []string{
+			"-t", ap.PlotDir,
+			"-2", ap.PlotDir,
+			"-d", ap.TargetDir,
+			"-f", ap.FarmerPublicKey,
+			"-p", ap.PoolPublicKey,
+		}
+		if ap.Threads > 0 {
+			args = append(args, "-r", fmt.Sprintf("%d", ap.Threads))
+		}
+		if ap.BucketSize > 0 {
+			args = append(args, "-u", fmt.Sprintf("%d", ap.BucketSize))
+		}
+	} else {
+		cmd = path.Join(config.ChiaRoot, "chia")
+		args = []string{
+			"plots", "create",
+			"-n1",
+			"-t" + ap.PlotDir,
+			"-d" + ap.TargetDir,
+		}
+		if len(ap.Fingerprint) > 0 {
+			args = append(args, "-a"+ap.Fingerprint)
+		}
+		if len(ap.FarmerPublicKey) > 0 {
+			args = append(args, "-f"+ap.FarmerPublicKey)
+		}
+		if len(ap.PoolPublicKey) > 0 {
+			args = append(args, "-p"+ap.PoolPublicKey)
+		}
+		if ap.Threads > 0 {
+			args = append(args, fmt.Sprintf("-r%d", ap.Threads))
+		}
+		if ap.PlotSize > 0 {
+			args = append(args, fmt.Sprintf("-k%d", ap.PlotSize))
+			if ap.PlotSize < 32 {
+				args = append(args, "--override-k")
+			}
+		} else {
+			args = append(args, "-k32")
+		}
+
+		if ap.Buffers > 0 {
+			args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
+		} else {
+			switch ap.PlotSize {
+			case 32:
+				args = append(args, fmt.Sprintf("-b%d", 3390))
+				break
+			case 33:
+				args = append(args, fmt.Sprintf("-b%d", 7400))
+				break
+			case 34:
+				args = append(args, fmt.Sprintf("-b%d", 14800))
+				break
+			case 35:
+				args = append(args, fmt.Sprintf("-b%d", 29600))
+				break
+			default:
+				break
+
+			}
+		}
+
+		if ap.DisableBitField {
+			args = append(args, "-e")
+		}
+		if ap.UseTargetForTmp2 {
+			args = append(args, "-2"+ap.TargetDir)
+		}
+		if ap.BucketSize > 0 {
+			args = append(args, fmt.Sprintf("-u%d", ap.BucketSize))
+		}
+	}
+	return
+}
+
 func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 	reader := bufio.NewReader(in)
 	var logFile *os.File
@@ -241,27 +266,61 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 		if s, err := reader.ReadString('\n'); err != nil {
 			break
 		} else {
-			if strings.HasPrefix(s, "Starting phase ") {
-				ap.Phase = s[15:18]
-				switch ap.Phase {
-				case "2/4":
+			if ap.useMadmaxPlotter {
+				if strings.HasPrefix(s, "Plot Name:") {
+					ap.Phase = "1/4"
+					ap.Progress = "1%"
+					ap.Id = strings.TrimSuffix(s[37:], "\n")
+					if len(ap.SavePlotLogDir) > 0 {
+						logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
+						logFile, err = os.Create(logFilePath)
+						if err != nil {
+							fmt.Sprintf("Failed to create log file [%s]: %s", logFilePath, err)
+						} else {
+							for _, l := range ap.Tail {
+								logFile.Write([]byte(l))
+							}
+						}
+					}
+				}
+				if strings.HasPrefix(s, "Phase 1 took") {
+					ap.Phase = "2/4"
+					ap.Progress = "25%"
 					ap.Phase1Time = time.Now()
-				case "3/4":
+				}
+				if strings.HasPrefix(s, "Phase 2 took") {
+					ap.Phase = "3/4"
+					ap.Progress = "50%"
 					ap.Phase2Time = time.Now()
-				case "4/4":
+				}
+				if strings.HasPrefix(s, "Phase 3 took") {
+					ap.Phase = "4/4"
+					ap.Progress = "75%"
 					ap.Phase3Time = time.Now()
 				}
-			}
-			if strings.HasPrefix(s, "ID: ") {
-				ap.Id = strings.TrimSuffix(s[4:], "\n")
-				if len(ap.SavePlotLogDir) > 0 {
-					logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
-					logFile, err = os.Create(logFilePath)
-					if err != nil {
-						fmt.Sprintf("Failed to create log file [%s]: %s", logFilePath, err)
-					} else {
-						for _, l := range ap.Tail {
-							logFile.Write([]byte(l))
+			} else {
+				if strings.HasPrefix(s, "Starting phase ") {
+					ap.Phase = s[15:18]
+					switch ap.Phase {
+					case "2/4":
+						ap.Phase1Time = time.Now()
+					case "3/4":
+						ap.Phase2Time = time.Now()
+					case "4/4":
+						ap.Phase3Time = time.Now()
+					}
+				}
+				if strings.HasPrefix(s, "ID: ") {
+					ap.Id = strings.TrimSuffix(s[4:], "\n")
+					if len(ap.SavePlotLogDir) > 0 {
+						logFilePath := filepath.Join(ap.SavePlotLogDir, fmt.Sprintf("plotng_log_%s.txt", ap.Id))
+						logFile, err = os.Create(logFilePath)
+						if err != nil {
+							fmt.Sprintf("Failed to create log file [%s]: %s", logFilePath, err)
+						} else {
+							for _, l := range ap.Tail {
+								logFile.Write([]byte(l))
+							}
 						}
 					}
 				}
