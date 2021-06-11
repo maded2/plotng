@@ -67,7 +67,8 @@ eg. plotng-client -hosts plotter1:8484,plotter2,plotter3:8485
         "BucketSize": 0,
         "SavePlotLogDir": "",
         "PlotSize": 32,
-        "ChiaRoot": ""
+        "ChiaRoot": "",
+        "MadMaxPlotter": ""
     }
 ```
 
@@ -96,5 +97,6 @@ Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 - SavePlotLogDir : saves plotting logs to this directory. logs are not saved if no directory is provided (default: "")
 - PlotSize : plot size, default to k32 is not set.  If set then it also pick sensible buffers for the given size.
 - ChiaRoot : the directory to find the chia binary in (typically this should remain as an empty string and the environment should be activated instead)
+- MadMaxPlotter : location of the madmax plotter binary (experimental support)
 
 Please note PlotNG now skips any destination directory which have less than 105GB of disk space, if you set DiskSpaceCheck to true.
