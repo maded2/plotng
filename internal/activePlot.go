@@ -182,13 +182,22 @@ func (ap *ActivePlot) createCmd(config *Config) (cmd string, args []string) {
 	if len(config.MadMaxPlotter) > 0 {
 		ap.useMadmaxPlotter = true
 		cmd = config.MadMaxPlotter
+		plotDir := ap.PlotDir
+		targetDir := ap.TargetDir
+		if strings.HasSuffix(plotDir, "/") == false {
+			plotDir += "/"
+		}
+		if strings.HasSuffix(targetDir, "/") == false {
+			targetDir += "/"
+		}
 		args = []string{
-			"-t", ap.PlotDir,
-			"-2", ap.PlotDir,
-			"-d", ap.TargetDir,
+			"-t", plotDir,
+			"-2", plotDir,
+			"-d", targetDir,
 			"-f", ap.FarmerPublicKey,
 			"-p", ap.PoolPublicKey,
 		}
+
 		if ap.Threads > 0 {
 			args = append(args, "-r", fmt.Sprintf("%d", ap.Threads))
 		}
