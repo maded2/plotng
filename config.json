@@ -16,6 +16,7 @@
   "MaxActivePlotPerTemp": 0,
   "MaxActivePlotPerPhase1": 0,
   "UseTargetForTmp2": false,
+  "AsyncCopying": true,
   "BucketSize": 0,
   "SavePlotLogDir": "",
   "PlotSize": 32,

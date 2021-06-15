@@ -72,6 +72,7 @@ func TestCanCreateNewPlotObeysStartTime(t *testing.T) {
 			CurrentConfig: &Config{
 				TargetDirectory: []string{"target1", "target2"},
 				TempDirectory:   []string{"plot"},
+				NumberOfParallelPlots: 1,
 			},
 		},
 		targetDelayStartTime: initialTime,
@@ -90,6 +91,7 @@ func TestCanCreateNewPlotCyclesTargets(t *testing.T) {
 			CurrentConfig: &Config{
 				TargetDirectory: []string{"target1", "target2"},
 				TempDirectory:   []string{"plot"},
+				NumberOfParallelPlots: 1,
 			},
 		},
 	}
@@ -112,6 +114,7 @@ func TestCanCreateNewPlotHandlesTempChange(t *testing.T) {
 			CurrentConfig: &Config{
 				TargetDirectory: []string{"target"},
 				TempDirectory:   []string{"plot1", "plot2", "plot3", "plot4"},
+				NumberOfParallelPlots: 1,
 			},
 		},
 	}
@@ -143,6 +146,7 @@ func TestCanCreateNewPlotLimitsPhase1(t *testing.T) {
 			CurrentConfig: &Config{
 				TargetDirectory:        []string{"target"},
 				TempDirectory:          []string{"plot"},
+				NumberOfParallelPlots: 4,
 				MaxActivePlotPerPhase1: 2,
 			},
 		},
@@ -173,6 +177,7 @@ func TestCanCreateNewPlotCyclesPlots(t *testing.T) {
 			CurrentConfig: &Config{
 				TargetDirectory: []string{"target"},
 				TempDirectory:   []string{"plot1", "plot2"},
+				NumberOfParallelPlots: 1,
 			},
 		},
 	}
@@ -196,6 +201,7 @@ func TestCanCreateNewPlotLimitsPlots(t *testing.T) {
 			CurrentConfig: &Config{
 				TargetDirectory:      []string{"target"},
 				TempDirectory:        []string{"plot1", "plot2"},
+				NumberOfParallelPlots: 5,
 				MaxActivePlotPerTemp: 2,
 			},
 		},
@@ -231,6 +237,7 @@ func TestCanCreateNewPlotLimitsTargets(t *testing.T) {
 			CurrentConfig: &Config{
 				TargetDirectory:        []string{"target1", "target2"},
 				TempDirectory:          []string{"plot"},
+				NumberOfParallelPlots: 5,
 				MaxActivePlotPerTarget: 2,
 			},
 		},
@@ -251,4 +258,39 @@ func TestCanCreateNewPlotLimitsTargets(t *testing.T) {
 	checkFailure(t, svr, now, msgStagger) // After cycling targets, it's always a reject
 
 	checkFailure(t, svr, now, msgTooManyActive) // We're busy
+}
+
+func TestCanCreateNewPlotParallel(t *testing.T) {
+	const msgTooManyPlots = "running 2/2 plots"
+
+	svr := &Server{
+		config: &PlotConfig{
+			CurrentConfig: &Config{
+				TargetDirectory:       []string{"target"},
+				TempDirectory:         []string{"plot"},
+				NumberOfParallelPlots: 2,
+				AsyncCopying:          true,
+			},
+		},
+		active: make(map[int64]*ActivePlot),
+	}
+
+	now := initialTime
+	checkSuccess(t, svr, now, "target", "plot")
+	checkFailure(t, svr, now, msgStagger) // After cycling targets, it's always a reject
+	svr.active[1] = &ActivePlot{State: PlotRunning, Phase: "1/4"}
+
+	checkSuccess(t, svr, now, "target", "plot")
+	checkFailure(t, svr, now, msgStagger) // After cycling targets, it's always a reject
+	svr.active[2] = &ActivePlot{State: PlotRunning, Phase: "1/4"}
+	checkFailure(t, svr, now, msgTooManyPlots) // We're busy
+
+	svr.active[1].Phase = "2/4"
+	checkFailure(t, svr, now, msgTooManyPlots) // We're busy
+
+	svr.active[1].Phase = "3/4"
+	checkFailure(t, svr, now, msgTooManyPlots) // We're busy
+
+	svr.active[1].Phase = "4/4"
+	checkSuccess(t, svr, now, "target", "plot")
 }

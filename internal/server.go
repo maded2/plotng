@@ -51,17 +51,14 @@ func (server *Server) createPlot(t time.Time) {
 	if server.config.CurrentConfig != nil {
 		server.config.Lock.RLock()
 		server.lock.Lock()
-		if len(server.active) < server.config.CurrentConfig.NumberOfParallelPlots {
-			if targetDir, plotDir, err := server.canCreateNewPlot(server.config.CurrentConfig, time.Now()); err == nil {
-				server.createNewPlot(server.config.CurrentConfig, targetDir, plotDir)
-				server.lastStatus = "Creating plot"
-			} else {
-				log.Printf("Skipping new plot: %v", err)
-				server.lastStatus = err.Error()
-			}
+		if targetDir, plotDir, err := server.canCreateNewPlot(server.config.CurrentConfig, time.Now()); err == nil {
+			server.createNewPlot(server.config.CurrentConfig, targetDir, plotDir)
+			server.lastStatus = "Creating plot"
 		} else {
-			server.lastStatus = fmt.Sprintf("running %d/%d plots", len(server.active), server.config.CurrentConfig.NumberOfParallelPlots)
+			log.Printf("Skipping new plot: %v", err)
+			server.lastStatus = err.Error()
 		}
+
 		server.lock.Unlock()
 		server.config.Lock.RUnlock()
 	}
@@ -82,6 +79,9 @@ func (server *Server) canCreateNewPlot(config *Config, now time.Time) (string, s
 	}
 	if now.Before(server.targetDelayStartTime) {
 		return "", "", fmt.Errorf("waiting until %s", server.targetDelayStartTime.Format("2006-01-02 15:04:05"))
+	}
+	if server.countActivePlots() >= server.config.CurrentConfig.NumberOfParallelPlots {
+		return "", "", fmt.Errorf("running %d/%d plots", server.countActivePlots(), server.config.CurrentConfig.NumberOfParallelPlots)
 	}
 
 	if server.currentTarget >= len(config.TargetDirectory) {
@@ -160,6 +160,20 @@ func (server *Server) countActiveTarget(path string) (count int) {
 			count++
 		}
 	}
+	return
+}
+
+func (server *Server) countActivePlots() (count int) {
+	if server.config.CurrentConfig.AsyncCopying {
+		for _, plot := range server.active {
+			if plot.getCurrentPhase() < 4 {
+				count++
+			}
+		}
+	}  else {
+		count = len(server.active)
+	}
+
 	return
 }
 

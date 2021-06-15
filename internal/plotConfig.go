@@ -27,6 +27,7 @@ type Config struct {
 	MaxActivePlotPerTemp   int
 	MaxActivePlotPerPhase1 int
 	UseTargetForTmp2       bool
+	AsyncCopying           bool
 	BucketSize             int
 	SavePlotLogDir         string
 	ChiaRoot               string
