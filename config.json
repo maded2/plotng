@@ -2,6 +2,7 @@
   "Fingerprint": "",
   "FarmerPublicKey": "",
   "PoolPublicKey": "",
+  "ContractAddress": "",
   "Threads": 0,
   "Buffers": 0,
   "DisableBitField": false,

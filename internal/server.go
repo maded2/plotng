@@ -139,6 +139,7 @@ func (server *Server) createNewPlot(config *Config, targetDir string, plotDir st
 		Fingerprint:      config.Fingerprint,
 		FarmerPublicKey:  config.FarmerPublicKey,
 		PoolPublicKey:    config.PoolPublicKey,
+		ContractAddress:  config.ContractAddress,
 		Threads:          config.Threads,
 		Buffers:          config.Buffers,
 		PlotSize:         config.PlotSize,

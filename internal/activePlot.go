@@ -38,6 +38,7 @@ type ActivePlot struct {
 	Fingerprint     string
 	FarmerPublicKey string
 	PoolPublicKey   string
+	ContractAddress string
 	Threads         int
 	PlotSize        int
 	Buffers         int
@@ -209,23 +210,26 @@ func (ap *ActivePlot) createCmd(config *Config) (cmd string, args []string) {
 		args = []string{
 			"plots", "create",
 			"-n1",
-			"-t" + ap.PlotDir,
-			"-d" + ap.TargetDir,
+			"-t", ap.PlotDir,
+			"-d", ap.TargetDir,
 		}
 		if len(ap.Fingerprint) > 0 {
-			args = append(args, "-a"+ap.Fingerprint)
+			args = append(args, "-a", ap.Fingerprint)
 		}
 		if len(ap.FarmerPublicKey) > 0 {
-			args = append(args, "-f"+ap.FarmerPublicKey)
+			args = append(args, "-f", ap.FarmerPublicKey)
 		}
 		if len(ap.PoolPublicKey) > 0 {
-			args = append(args, "-p"+ap.PoolPublicKey)
+			args = append(args, "-p", ap.PoolPublicKey)
+		}
+		if len(ap.ContractAddress) > 0 {
+			args = append(args, "-c", ap.PoolPublicKey)
 		}
 		if ap.Threads > 0 {
-			args = append(args, fmt.Sprintf("-r%d", ap.Threads))
+			args = append(args, "-r", fmt.Sprintf("%d", ap.Threads))
 		}
 		if ap.PlotSize > 0 {
-			args = append(args, fmt.Sprintf("-k%d", ap.PlotSize))
+			args = append(args, "-k", fmt.Sprintf("%d", ap.PlotSize))
 			if ap.PlotSize < 32 {
 				args = append(args, "--override-k")
 			}
@@ -234,20 +238,20 @@ func (ap *ActivePlot) createCmd(config *Config) (cmd string, args []string) {
 		}
 
 		if ap.Buffers > 0 {
-			args = append(args, fmt.Sprintf("-b%d", ap.Buffers))
+			args = append(args, "-b", fmt.Sprintf("%d", ap.Buffers))
 		} else {
 			switch ap.PlotSize {
 			case 32:
-				args = append(args, fmt.Sprintf("-b%d", 3390))
+				args = append(args, "-b", fmt.Sprintf("%d", 3390))
 				break
 			case 33:
-				args = append(args, fmt.Sprintf("-b%d", 7400))
+				args = append(args, "-b", fmt.Sprintf("%d", 7400))
 				break
 			case 34:
-				args = append(args, fmt.Sprintf("-b%d", 14800))
+				args = append(args, "-b", fmt.Sprintf("%d", 14800))
 				break
 			case 35:
-				args = append(args, fmt.Sprintf("-b%d", 29600))
+				args = append(args, "-b", fmt.Sprintf("%d", 29600))
 				break
 			default:
 				break

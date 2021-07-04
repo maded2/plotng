@@ -50,6 +50,7 @@ eg. plotng-client -hosts plotter1:8484,plotter2,plotter3:8485
         "Fingerprint": "",
         "FarmerPublicKey": "",
         "PoolPublicKey": "",
+        "ContractAddress": "",
         "Threads": 0,
         "Buffers": 0,
         "DisableBitField": false,
@@ -78,7 +79,8 @@ Please note for Windows, please use capital drive letter and '/'  eg.  "D:/temp"
 
 - Fingerprint : fingerprint passed to the chia command line tool (you can either use the fingerprint if the private has been installed on the plotter or use the following farmer/pool public key instead)
 - FarmerPublicKey : Farmer Public Key passed to the chia command line tool
-- PoolPublicKey : Pool Public Key passed to the chia command line tool
+- PoolPublicKey : Pool Public Key passed to the chia command line tool 
+- ContractAddress: Pool NFT Contract Address for Portable Plot
 - Threads : number of threads use by the chia command line tool.  If the value is zero or missing then chia will use the default
 - Buffers : number of buffers use by the chia command line tool.  If the value is zero or missing then chia will use the default
 - DisableBitField : With BitField your plotting almost always gets faster. Set true if your CPU designed before 2010.
