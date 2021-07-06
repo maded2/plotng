@@ -147,6 +147,7 @@ func (server *Server) createNewPlot(config *Config, targetDir string, plotDir st
 		UseTargetForTmp2: config.UseTargetForTmp2,
 		BucketSize:       config.BucketSize,
 		SavePlotLogDir:   config.SavePlotLogDir,
+		Tmp2Dir:          config.Tmp2,
 		Phase:            "NA",
 		Tail:             nil,
 		State:            PlotRunning,

@@ -43,6 +43,7 @@ type ActivePlot struct {
 	PlotSize        int
 	Buffers         int
 	DisableBitField bool
+	Tmp2Dir         string
 
 	Phase            string
 	Tail             []string
@@ -193,12 +194,15 @@ func (ap *ActivePlot) createCmd(config *Config) (cmd string, args []string) {
 		}
 		args = []string{
 			"-t", plotDir,
-			"-2", plotDir,
 			"-d", targetDir,
 			"-f", ap.FarmerPublicKey,
 			"-p", ap.PoolPublicKey,
 		}
-
+		if len(ap.Tmp2Dir) > 0 {
+			args = append(args, "-2", ap.Tmp2Dir)
+		} else {
+			args = append(args, "-2", plotDir)
+		}
 		if ap.Threads > 0 {
 			args = append(args, "-r", fmt.Sprintf("%d", ap.Threads))
 		}

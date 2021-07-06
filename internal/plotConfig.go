@@ -32,6 +32,7 @@ type Config struct {
 	SavePlotLogDir         string
 	ChiaRoot               string
 	MadMaxPlotter          string
+	Tmp2                   string
 }
 
 type PlotConfig struct {

@@ -21,5 +21,6 @@
   "SavePlotLogDir": "",
   "PlotSize": 32,
   "ChiaRoot": "",
-  "MadMaxPlotter": ""
+  "MadMaxPlotter": "",
+  "Tmp2": ""
 }
