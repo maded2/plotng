@@ -227,7 +227,7 @@ func (ap *ActivePlot) createCmd(config *Config) (cmd string, args []string) {
 			args = append(args, "-p", ap.PoolPublicKey)
 		}
 		if len(ap.ContractAddress) > 0 {
-			args = append(args, "-c", ap.PoolPublicKey)
+			args = append(args, "-c", ap.ContractAddress)
 		}
 		if ap.Threads > 0 {
 			args = append(args, "-r", fmt.Sprintf("%d", ap.Threads))
