@@ -256,7 +256,7 @@ func (client *Client) setupUI(hostCount int) {
 	if hostCount > 4 { // hosts is low priority, so keep the screen space usage low
 		hostCount = 4
 	}
-	const extraRows = 1+1+1 // border + header row + border
+	const extraRows = 1 + 1 + 1 // border + header row + border
 	mainPanel.AddItem(client.hostsTable, hostCount+extraRows, 0, false)
 	mainPanel.AddItem(client.logTextbox, 0, 1, false)
 
@@ -277,7 +277,7 @@ type activePlotsData struct {
 	Host      string        `header:"Host"`
 	PlotId    string        `header:"Plot ID"`
 	Status    int           `header:"Status"`
-	Phase     int           `header:"Phase"    data-align:"right"`
+	Phase     string        `header:"Phase"    data-align:"right"`
 	Progress  int           `header:"Progress" data-align:"right"`
 	StartTime time.Time     `header:"Start Time"`
 	Duration  time.Duration `header:"Duration"`
@@ -299,7 +299,7 @@ func (apd *activePlotsData) Strings() []string {
 		apd.Host,
 		shortenPlotId(apd.PlotId),
 		status,
-		fmt.Sprintf("%d/4", apd.Phase),
+		apd.Phase,
 		fmt.Sprintf("%d%%", apd.Progress),
 		apd.StartTime.Format("2006-01-02 15:04:05"),
 		DurationString(apd.Duration),
@@ -313,7 +313,7 @@ func (client *Client) makeActivePlotsData(host string, p *ActivePlot) *activePlo
 	apd.Host = host
 	apd.PlotId = p.Id
 	apd.Status = p.State
-	apd.Phase = p.getCurrentPhase()
+	apd.Phase = p.Phase
 	apd.Progress = p.getProgress()
 	apd.StartTime = p.getPhaseTime(0)
 	apd.Duration = time.Since(apd.StartTime)
@@ -370,6 +370,7 @@ type plotDirData struct {
 	AvgPhase2      time.Duration `header:"Avg Phase 2" data-align:"right"`
 	AvgPhase3      time.Duration `header:"Avg Phase 3" data-align:"right"`
 	AvgPhase4      time.Duration `header:"Avg Phase 4" data-align:"right"`
+	AvgCopying     time.Duration `header:"Avg Copying" data-align:"right"`
 	Count          int           `header:"Count" data-align:"right"`
 	Failed         int           `header:"Failed" data-align:"right"`
 }
@@ -383,6 +384,7 @@ func (pdd *plotDirData) Strings() []string {
 		DurationString(pdd.AvgPhase2),
 		DurationString(pdd.AvgPhase3),
 		DurationString(pdd.AvgPhase4),
+		DurationString(pdd.AvgCopying),
 		fmt.Sprintf("%d", pdd.Count),
 		fmt.Sprintf("%d", pdd.Failed),
 	}
@@ -417,6 +419,7 @@ func (client *Client) makePlotDirsData() map[string]*plotDirData {
 				pdd.AvgPhase2 += plot.getPhaseTime(2).Sub(plot.getPhaseTime(1))
 				pdd.AvgPhase3 += plot.getPhaseTime(3).Sub(plot.getPhaseTime(2))
 				pdd.AvgPhase4 += plot.getPhaseTime(4).Sub(plot.getPhaseTime(3))
+				pdd.AvgCopying += plot.getPhaseTime(5).Sub(plot.getPhaseTime(4))
 				pdd.Count++
 			case PlotError, PlotKilled:
 				pdd.Failed++
@@ -430,6 +433,7 @@ func (client *Client) makePlotDirsData() map[string]*plotDirData {
 			pdd.AvgPhase2 /= time.Duration(pdd.Count)
 			pdd.AvgPhase3 /= time.Duration(pdd.Count)
 			pdd.AvgPhase4 /= time.Duration(pdd.Count)
+			pdd.AvgCopying /= time.Duration(pdd.Count)
 		}
 	}
 	return plotDirs
@@ -502,7 +506,7 @@ func (client *Client) makeDestDirsData() map[string]*destDirData {
 			}
 			switch plot.State {
 			case PlotFinished:
-				ddd.AvgPlotTime += plot.getPhaseTime(4).Sub(plot.getPhaseTime(0))
+				ddd.AvgPlotTime += plot.getPhaseTime(5).Sub(plot.getPhaseTime(0))
 				ddd.Count++
 			case PlotError, PlotKilled:
 				ddd.Failed++
@@ -544,7 +548,7 @@ type archivedPlotData struct {
 	Host      string        `header:"Host"`
 	PlotId    string        `header:"Plot Id"`
 	Status    int           `header:"Status"`
-	Phase     int           `header:"Phase" data-align:"right"`
+	Phase     string        `header:"Phase" data-align:"right"`
 	StartTime time.Time     `header:"Start Time"`
 	EndTime   time.Time     `header:"End Time"`
 	Duration  time.Duration `header:"Duration"`
@@ -566,7 +570,7 @@ func (apd *archivedPlotData) Strings() []string {
 		apd.Host,
 		shortenPlotId(apd.PlotId),
 		status,
-		fmt.Sprintf("%d/4", apd.Phase),
+		apd.Phase,
 		apd.StartTime.Format("2006-01-02 15:04:05"),
 		apd.EndTime.Format("2006-01-02 15:04:05"),
 		DurationString(apd.Duration),
@@ -580,9 +584,9 @@ func (client *Client) makeArchivedPlotData(host string, p *ActivePlot) *archived
 	apd.Host = host
 	apd.PlotId = p.Id
 	apd.Status = p.State
-	apd.Phase = p.getCurrentPhase()
+	apd.Phase = p.Phase
 	apd.StartTime = p.getPhaseTime(0)
-	apd.EndTime = p.getPhaseTime(4)
+	apd.EndTime = p.getPhaseTime(5)
 	apd.Duration = apd.EndTime.Sub(apd.StartTime)
 	apd.PlotDir = p.PlotDir
 	apd.DestDir = p.TargetDir
@@ -642,8 +646,8 @@ func (client *Client) selectArchivedPlot(key string) {
 // Host data
 
 type hostsData struct {
-	Host       string    `header:"Host"`
-	Status     string    `header:"Status"`
+	Host   string `header:"Host"`
+	Status string `header:"Status"`
 }
 
 func (hd *hostsData) Strings() []string {

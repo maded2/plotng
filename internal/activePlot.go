@@ -54,6 +54,7 @@ type ActivePlot struct {
 	Phase1Time       time.Time
 	Phase2Time       time.Time
 	Phase3Time       time.Time
+	Phase4Time       time.Time
 	Pid              int
 	UseTargetForTmp2 bool
 	BucketSize       int
@@ -77,6 +78,8 @@ func (ap *ActivePlot) getPhaseTime(phase int) time.Time {
 	case 3:
 		return ap.Phase3Time
 	case 4:
+		return ap.Phase4Time
+	case 5:
 		return ap.EndTime
 	default:
 		panic("request for invalid phase time")
@@ -86,6 +89,9 @@ func (ap *ActivePlot) getPhaseTime(phase int) time.Time {
 // getCurrentPhase returns the current phase, or a negative number to indicate an error.
 // TODO: We can also change this to be part of the structure, but that's also a protocol change.
 func (ap *ActivePlot) getCurrentPhase() int {
+	if ap.Phase == "cp" {
+		return 5
+	}
 	parts := strings.Split(ap.Phase, "/")
 	if len(parts) != 2 {
 		return -1
@@ -315,6 +321,11 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 					ap.Progress = "75%"
 					ap.Phase3Time = time.Now()
 				}
+				if strings.HasPrefix(s, "Phase 4 took") {
+					ap.Phase = "cp"
+					ap.Progress = "100%"
+					ap.Phase4Time = time.Now()
+				}
 			} else {
 				if strings.HasPrefix(s, "Starting phase ") {
 					ap.Phase = s[15:18]
@@ -326,6 +337,10 @@ func (ap *ActivePlot) processLogs(in io.ReadCloser) {
 					case "4/4":
 						ap.Phase3Time = time.Now()
 					}
+				}
+				if strings.HasPrefix(s, "Copied final file") {
+					ap.Phase = "cp"
+					ap.Phase4Time = time.Now()
 				}
 				if strings.HasPrefix(s, "ID: ") {
 					ap.Id = strings.TrimSuffix(s[4:], "\n")
